@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminConfig from "./pages/AdminConfig";
+import AdminSetup from "./pages/AdminSetup";
 import Pantalla from "./pages/Pantalla";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/setup" element={<AdminSetup />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/config" element={<AdminConfig />} />
           <Route path="/pantalla" element={<Pantalla />} />
