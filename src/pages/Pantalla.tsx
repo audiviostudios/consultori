@@ -19,8 +19,21 @@ const getCognom = (nomComplet: string): string => {
 
 // Extreu les inicials d'un nom complet (p.ex. "Paco Seró" -> "P. S.")
 const getInicials = (nomComplet: string): string => {
-  const parts = nomComplet.trim().split(' ').filter(p => p.length > 0);
-  return parts.map(part => part[0].toUpperCase() + '.').join(' ');
+  // Netegem cometes/puntuació i ignorem paraules poc informatives
+  const stopwords = new Set(['de', 'del', 'd', 'la', 'el', 'i']);
+
+  const parts = nomComplet
+    .trim()
+    .replace(/[-_]+/g, ' ')
+    .split(/\s+/)
+    .map((p) => p.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ''))
+    .filter((p) => p.length > 0)
+    .filter((p) => !stopwords.has(p.toLowerCase()));
+
+  if (parts.length === 0) return '';
+
+  const chosen = parts.length >= 2 ? [parts[0], parts[parts.length - 1]] : [parts[0]];
+  return chosen.map((p) => `${p[0].toUpperCase()}.`).join(' ');
 };
 
 const LlistaTorns = ({ 
