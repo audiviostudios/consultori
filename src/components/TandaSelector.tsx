@@ -24,7 +24,7 @@ interface TandaSelectorProps {
 const formSchema = z.object({
   nom_complet: z.string().trim().min(2, 'El nom ha de tenir almenys 2 caràcters').max(100),
   telefon: z.string().trim().regex(/^[0-9]{9}$/, 'El telèfon ha de tenir 9 dígits'),
-  email: z.string().trim().email('Correu electrònic no vàlid').max(255),
+  email: z.string().trim().email('Correu electrònic no vàlid').max(255).optional().or(z.literal('')),
 });
 
 export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, titol, dataVisita }: TandaSelectorProps) {
@@ -83,17 +83,19 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
       
       setGeneratedPin(pin);
       
-      // Enviar recordatori per email (en segon pla)
-      supabase.functions.invoke('enviar-recordatori', {
-        body: {
-          email: formData.email,
-          nom: formData.nom_complet,
-          numero_tanda: selectedTanda,
-          tipus,
-          data: dataVisita || new Date().toISOString(),
-          pin_cancelacio: pin,
-        },
-      }).catch(console.error);
+      // Enviar recordatori per email només si hi ha correu
+      if (formData.email) {
+        supabase.functions.invoke('enviar-recordatori', {
+          body: {
+            email: formData.email,
+            nom: formData.nom_complet,
+            numero_tanda: selectedTanda,
+            tipus,
+            data: dataVisita || new Date().toISOString(),
+            pin_cancelacio: pin,
+          },
+        }).catch(console.error);
+      }
       
       setIsConfirmed(true);
       toast.success('Cita reservada correctament!');
@@ -247,19 +249,21 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
                 <div className="space-y-2">
                   <Label htmlFor="email" className="flex items-center gap-2">
                     <Mail className="w-4 h-4" />
-                    Correu electrònic
+                    Correu electrònic <span className="text-muted-foreground text-xs">(opcional)</span>
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="joan@exemple.cat"
-                    required
+                    placeholder="joan@exemple.cat (opcional)"
                   />
                   {errors.email && (
                     <p className="text-sm text-destructive">{errors.email}</p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Si poses el correu, rebràs un recordatori
+                  </p>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={crearCita.isPending}>
