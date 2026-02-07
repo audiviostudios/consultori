@@ -156,8 +156,33 @@ export function useEliminarDiaVisita() {
         .eq('id', id);
       
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['dies-visita'] });
+      
+      // Snapshot the previous value
+      const previousDies = queryClient.getQueryData<DiaVisita[]>(['dies-visita']);
+      
+      // Optimistically update by removing the deleted day
+      if (previousDies) {
+        queryClient.setQueryData<DiaVisita[]>(
+          ['dies-visita'],
+          previousDies.filter(dia => dia.id !== deletedId)
+        );
+      }
+      
+      return { previousDies };
+    },
+    onError: (_err, _deletedId, context) => {
+      // Rollback on error
+      if (context?.previousDies) {
+        queryClient.setQueryData(['dies-visita'], context.previousDies);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['dies-visita'] });
     },
   });
