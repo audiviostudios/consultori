@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { ArrowLeft, Plus, Trash2, Calendar, Stethoscope, Heart, Syringe } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar, Stethoscope, Heart, Syringe, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita } from '@/hooks/useDiesVisita';
+import { useCleanupData } from '@/hooks/useCleanupData';
 import { DiaVisita } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -138,8 +139,20 @@ const AdminConfig = () => {
   const crearDia = useCrearDiaVisita();
   const actualitzarDia = useActualitzarDiaVisita();
   const eliminarDia = useEliminarDiaVisita();
+  const cleanupData = useCleanupData();
   
   const [novaData, setNovaData] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  const handleCleanup = async () => {
+    if (!confirm('Estàs segur? S\'eliminaran totes les cites i dies de visita anteriors a avui, i les consultes ateses de més de 24h.')) return;
+    
+    try {
+      const result = await cleanupData.mutateAsync();
+      toast.success(result.message || 'Neteja completada correctament');
+    } catch (error) {
+      toast.error('Error al netejar les dades');
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -252,6 +265,29 @@ const AdminConfig = () => {
                   Afegir
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Neteja de dades */}
+          <Card className="border-destructive/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="w-5 h-5" />
+                Neteja de dades antigues
+              </CardTitle>
+              <CardDescription>
+                Elimina les cites i dies de visita anteriors a avui, i les consultes telefòniques ateses de més de 24 hores
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="destructive" 
+                onClick={handleCleanup} 
+                disabled={cleanupData.isPending}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${cleanupData.isPending ? 'animate-spin' : ''}`} />
+                {cleanupData.isPending ? 'Netejant...' : 'Netejar dades antigues'}
+              </Button>
             </CardContent>
           </Card>
 
