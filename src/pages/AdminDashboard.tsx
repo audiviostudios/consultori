@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight, Pill } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight, Pill, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCitesDia, useEliminarCita } from '@/hooks/useDiesVisita';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
 import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
 import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
@@ -21,22 +21,34 @@ interface CitaCardProps {
   cita: Cita;
   isActive: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 }
 
-function CitaCard({ cita, isActive, onSelect }: CitaCardProps) {
+function CitaCard({ cita, isActive, onSelect, onDelete }: CitaCardProps) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onSelect}
-      className={`
-        p-4 rounded-lg border-2 cursor-pointer transition-all
-        ${isActive 
-          ? 'border-primary bg-primary/5' 
-          : 'border-border hover:border-primary/50'
-        }
-      `}
+      className={
+        `relative p-4 rounded-lg border-2 cursor-pointer transition-all\n` +
+        (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50')
+      }
     >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-2 right-2 h-8 w-8"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title="Eliminar pacient"
+      >
+        <Trash2 className="w-4 h-4 text-destructive" />
+      </Button>
+
       <div className="flex items-center justify-between mb-2">
         <span className="text-3xl font-bold text-primary">{cita.numero_tanda}</span>
         {isActive && <Badge>Visitant</Badge>}
@@ -135,6 +147,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
   const { data: receptes = [] } = useReceptes();
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
+  const eliminarCita = useEliminarCita();
   const marcarAtesa = useMarcarConsultaAtesa();
   const marcarReceptaAtesa = useMarcarReceptaAtesa();
 
@@ -152,6 +165,16 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
       toast.success(`Visitant pacient ${numero}`);
     } catch (error) {
       toast.error('Error al actualitzar');
+    }
+  };
+
+  const handleDeleteCita = async (citaId: string) => {
+    if (!confirm('Vols eliminar aquesta cita?')) return;
+    try {
+      await eliminarCita.mutateAsync({ id: citaId });
+      toast.success('Pacient eliminat');
+    } catch (error) {
+      toast.error('Error al eliminar el pacient');
     }
   };
 
@@ -220,6 +243,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
                     cita={cita}
                     isActive={cita.numero_tanda === numeroActual}
                     onSelect={() => handleSelectCita(cita.numero_tanda)}
+                    onDelete={() => handleDeleteCita(cita.id)}
                   />
                 ))}
             </div>
