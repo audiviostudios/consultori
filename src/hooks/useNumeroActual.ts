@@ -49,7 +49,28 @@ export function useActualitzarNumero() {
     mutationFn: async ({ tipus, numero, dia_visita_id }: { tipus: 'metge' | 'infermera'; numero: number; dia_visita_id?: string }) => {
       const { data, error } = await supabase
         .from('numero_actual')
-        .update({ numero, dia_visita_id: dia_visita_id || null })
+        .update({ numero, dia_visita_id: dia_visita_id || null, estat_visita: null })
+        .eq('tipus', tipus)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['numero-actual'] });
+    },
+  });
+}
+
+export function useActualitzarEstatVisita() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tipus, estat_visita }: { tipus: 'metge' | 'infermera'; estat_visita: 'visitat' | 'no_assistit' }) => {
+      const { data, error } = await supabase
+        .from('numero_actual')
+        .update({ estat_visita })
         .eq('tipus', tipus)
         .select()
         .single();

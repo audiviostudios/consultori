@@ -3,14 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
-import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional } from '@/hooks/useNumeroActual';
+import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, useActualitzarEstatVisita } from '@/hooks/useNumeroActual';
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
@@ -179,6 +179,7 @@ const StaffDashboard = () => {
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
   const actualitzarNomProfessional = useActualitzarNomProfessional();
+  const actualitzarEstatVisita = useActualitzarEstatVisita();
 
   const numeroActualData = numerosActuals.find(n => n.tipus === staffRole);
   const [nomProfessional, setNomProfessional] = useState('');
@@ -229,6 +230,7 @@ const StaffDashboard = () => {
 
   const citesFiltered = cites.filter(c => c.tipus === staffRole);
   const numeroActual = numeroActualData?.numero || 0;
+  const estatVisita = numeroActualData?.estat_visita;
 
   const handleSelectCita = async (numero: number) => {
     if (!staffRole) return;
@@ -241,6 +243,16 @@ const StaffDashboard = () => {
       toast.success(`Visitant pacient ${numero}`);
     } catch (error) {
       toast.error('Error al actualitzar');
+    }
+  };
+
+  const handleMarcarEstat = async (estat: 'visitat' | 'no_assistit') => {
+    if (!staffRole) return;
+    try {
+      await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: estat });
+      toast.success(estat === 'visitat' ? 'Pacient marcat com visitat' : 'Pacient marcat com no assistit');
+    } catch (error) {
+      toast.error('Error al marcar l\'estat');
     }
   };
 
@@ -385,11 +397,37 @@ const StaffDashboard = () => {
               <TabsContent value="cites">
                 <Card>
                   <CardHeader className="pb-2 sm:pb-4">
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="truncate">
-                        {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
-                      </span>
+                    <CardTitle className="flex items-center justify-between text-sm sm:text-base">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="truncate">
+                          {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
+                        </span>
+                      </div>
+                      {numeroActual > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant={estatVisita === 'visitat' ? 'default' : 'outline'}
+                            className="h-8 bg-green-600 hover:bg-green-700 text-white border-green-600"
+                            onClick={() => handleMarcarEstat('visitat')}
+                            disabled={actualitzarEstatVisita.isPending}
+                          >
+                            <Check className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Visitat</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={estatVisita === 'no_assistit' ? 'default' : 'outline'}
+                            className="h-8 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                            onClick={() => handleMarcarEstat('no_assistit')}
+                            disabled={actualitzarEstatVisita.isPending}
+                          >
+                            <X className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">No assistit</span>
+                          </Button>
+                        </div>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
