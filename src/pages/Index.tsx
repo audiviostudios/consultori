@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { TandaSelector } from '@/components/TandaSelector';
 import { ConsultaForm } from '@/components/ConsultaForm';
+import { VoiceBookingAssistant } from '@/components/VoiceBookingAssistant';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { DiaVisita } from '@/lib/types';
 
@@ -310,6 +311,9 @@ const Index = () => {
           Consultori de l'Albagés • Sistema de gestió de cites
         </div>
       </footer>
+
+      {/* Assistent de veu amb IA */}
+      <VoiceBookingAssistant />
     </div>
   );
 };
