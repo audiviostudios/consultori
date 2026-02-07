@@ -9,6 +9,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminConfig from "./pages/AdminConfig";
 import AdminSetup from "./pages/AdminSetup";
 import Pantalla from "./pages/Pantalla";
+import PinLogin from "./pages/PinLogin";
+import StaffDashboard from "./pages/StaffDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/setup" element={<AdminSetup />} />
+          <Route path="/admin/pin" element={<PinLogin />} />
+          <Route path="/admin/staff" element={<StaffDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/config" element={<AdminConfig />} />
           <Route path="/pantalla" element={<Pantalla />} />
