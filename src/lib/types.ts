@@ -53,6 +53,7 @@ export interface NumeroActual {
   tipus: 'metge' | 'infermera';
   numero: number;
   dia_visita_id: string | null;
+  nom_professional: string | null;
   updated_at: string;
 }
 
