@@ -33,35 +33,38 @@ const LlistaTorns = ({
   const citesDelTipus = cites.filter(c => c.tipus === tipus);
   
   return (
-    <div className="mt-4 sm:mt-6 w-full max-w-[200px] mx-auto">
-      <div className="space-y-1">
-        {Array.from({ length: maxTorns }, (_, i) => i + 1).map(num => {
-          const cita = citesDelTipus.find(c => c.numero_tanda === num);
-          const isActual = num === numeroActual;
-          const isPast = num < numeroActual;
-          
-          return (
-            <motion.div
-              key={num}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: num * 0.05 }}
-              className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm
-                ${isActual ? 'bg-primary/20 ring-2 ring-primary' : ''}
-                ${isPast ? 'opacity-40' : ''}
-              `}
-            >
-              <span className={`font-bold w-6 text-center ${isActual ? textColor : 'text-foreground'}`}>
-                {num}
+    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">
+      {Array.from({ length: maxTorns }, (_, i) => i + 1).map(num => {
+        const cita = citesDelTipus.find(c => c.numero_tanda === num);
+        const isActual = num === numeroActual;
+        const isPast = num < numeroActual;
+        
+        return (
+          <motion.div
+            key={num}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: num * 0.03 }}
+            className={`
+              flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl min-w-[60px] sm:min-w-[70px]
+              ${isActual ? 'bg-primary/20 ring-2 ring-primary scale-110' : 'bg-secondary/50'}
+              ${isPast ? 'opacity-30' : ''}
+            `}
+          >
+            <span className={`text-xl sm:text-2xl font-bold ${isActual ? textColor : 'text-foreground'}`}>
+              {num}
+            </span>
+            <span className={`text-[10px] sm:text-xs truncate max-w-[55px] sm:max-w-[65px] text-center ${cita ? 'text-foreground' : 'text-muted-foreground/40'}`}>
+              {cita ? getCognom(cita.nom_complet) : '—'}
+            </span>
+            {isActual && (
+              <span className={`text-[9px] sm:text-[10px] font-semibold ${textColor} mt-0.5`}>
+                Actual
               </span>
-              <span className={`text-xs truncate flex-1 ${cita ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-                {cita ? getCognom(cita.nom_complet) : '—'}
-              </span>
-            </motion.div>
-          );
-        })}
-      </div>
+            )}
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
@@ -85,14 +88,13 @@ const NumeroDisplay = ({
   cites: Cita[];
   maxTorns: number;
 }) => {
-  const isMobile = useIsMobile();
   const tipusCita = tipus.toLowerCase() as 'metge' | 'infermera';
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="text-center flex flex-col items-center justify-center py-4 sm:py-0 h-full"
+      className="text-center flex flex-col items-center justify-center py-4 sm:py-0 h-full w-full"
     >
       <div className="flex-shrink-0">
         <div className={`w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full ${iconBg} flex items-center justify-center mx-auto mb-2 sm:mb-3`}>
@@ -104,49 +106,47 @@ const NumeroDisplay = ({
         </h1>
       </div>
       
-      <div className="flex items-start gap-4 sm:gap-6 flex-1">
-        {/* Número gran */}
-        <div className="flex flex-col items-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={numero}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className={`text-[6rem] sm:text-[8rem] md:text-[10rem] font-bold ${textColor} leading-none`}
-            >
-              {numero}
-            </motion.div>
-          </AnimatePresence>
-          
-          <p className="text-base sm:text-lg text-muted-foreground mt-1">
-            Número actual
-          </p>
+      {/* Número gran */}
+      <div className="flex flex-col items-center">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={numero}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.5, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className={`text-[5rem] sm:text-[6rem] md:text-[8rem] font-bold ${textColor} leading-none`}
+          >
+            {numero}
+          </motion.div>
+        </AnimatePresence>
+        
+        <p className="text-base sm:text-lg text-muted-foreground mt-1">
+          Número actual
+        </p>
 
-          {seguentNumero && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span className="text-xs sm:text-sm">Prepari's el</span>
-              <span className={`text-lg sm:text-xl font-bold ${textColor}`}>{seguentNumero}</span>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Llista de torns */}
-        {!isMobile && (
-          <LlistaTorns 
-            cites={cites} 
-            tipus={tipusCita} 
-            maxTorns={maxTorns} 
-            numeroActual={numero}
-            textColor={textColor}
-          />
+        {seguentNumero && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground"
+          >
+            <ArrowRight className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">Prepari's el</span>
+            <span className={`text-lg sm:text-xl font-bold ${textColor}`}>{seguentNumero}</span>
+          </motion.div>
         )}
+      </div>
+
+      {/* Llista de torns */}
+      <div className="w-full max-w-md px-2 mt-4">
+        <LlistaTorns 
+          cites={cites} 
+          tipus={tipusCita} 
+          maxTorns={maxTorns} 
+          numeroActual={numero}
+          textColor={textColor}
+        />
       </div>
     </motion.div>
   );
