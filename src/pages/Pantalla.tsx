@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Stethoscope, Heart, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Stethoscope, Heart, ArrowRight, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useCitesDia, useDiaVisitaActual, useDiesVisita } from '@/hooks/useDiesVisita';
@@ -97,7 +97,8 @@ const NumeroDisplay = ({
   seguentNumero,
   cites,
   maxTorns,
-  nomProfessional
+  nomProfessional,
+  estatVisita
 }: { 
   numero: number; 
   tipus: string;
@@ -108,6 +109,7 @@ const NumeroDisplay = ({
   cites: Cita[];
   maxTorns: number;
   nomProfessional: string | null;
+  estatVisita: 'visitat' | 'no_assistit' | null;
 }) => {
   const tipusCita = tipus.toLowerCase() as 'metge' | 'infermera';
   
@@ -162,6 +164,35 @@ const NumeroDisplay = ({
           </p>
         )}
 
+        {/* Mostrar estat de la visita */}
+        <AnimatePresence mode="wait">
+          {estatVisita && (
+            <motion.div
+              key={estatVisita}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm sm:text-base ${
+                estatVisita === 'visitat' 
+                  ? 'bg-green-500/20 text-green-600' 
+                  : 'bg-red-500/20 text-red-600'
+              }`}
+            >
+              {estatVisita === 'visitat' ? (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  <span>VISITAT</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-5 h-5" />
+                  <span>NO HA ASSISTIT</span>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {seguentNumero && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -208,6 +239,8 @@ const Pantalla = () => {
   const numeroInfermera = infermeraData?.numero || 0;
   const nomMetge = metgeData?.nom_professional || null;
   const nomInfermera = infermeraData?.nom_professional || null;
+  const estatMetge = metgeData?.estat_visita || null;
+  const estatInfermera = infermeraData?.estat_visita || null;
 
   // So quan canvia el número
   useNumeroChangeSound(numeroMetge, numeroInfermera);
@@ -248,6 +281,7 @@ const Pantalla = () => {
             cites={cites}
             maxTorns={diaPantalla?.max_tandes_metge || 10}
             nomProfessional={nomMetge}
+            estatVisita={estatMetge}
           />
         </div>
 
@@ -263,6 +297,7 @@ const Pantalla = () => {
             cites={cites}
             maxTorns={diaPantalla?.max_tandes_infermera || 10}
             nomProfessional={nomInfermera}
+            estatVisita={estatInfermera}
           />
         </div>
       </div>

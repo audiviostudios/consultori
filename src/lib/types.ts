@@ -54,6 +54,7 @@ export interface NumeroActual {
   numero: number;
   dia_visita_id: string | null;
   nom_professional: string | null;
+  estat_visita: 'visitat' | 'no_assistit' | null;
   updated_at: string;
 }
 
