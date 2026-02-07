@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
+import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { Cita, DiaVisita } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -107,6 +108,9 @@ const StaffDashboard = () => {
 
   const staffRole = sessionStorage.getItem('staff_role') as 'metge' | 'infermera' | null;
   const isAuthenticated = sessionStorage.getItem('staff_authenticated') === 'true';
+
+  // Subscripció a consultes telefòniques en temps real amb alerta sonora
+  useConsultesRealtime(staffRole);
 
   useEffect(() => {
     if (!isAuthenticated || !staffRole) {

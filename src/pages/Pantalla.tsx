@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Stethoscope, Heart, ArrowRight } from 'lucide-react';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useCitesDia, useDiaVisitaActual } from '@/hooks/useDiesVisita';
+import { useNumeroChangeSound } from '@/hooks/useNumeroChangeSound';
 
 const Pantalla = () => {
   const { data: numerosActuals = [] } = useNumeroActual();
@@ -10,6 +11,9 @@ const Pantalla = () => {
   
   const numeroMetge = numerosActuals.find(n => n.tipus === 'metge')?.numero || 0;
   const numeroInfermera = numerosActuals.find(n => n.tipus === 'infermera')?.numero || 0;
+
+  // So quan canvia el número
+  useNumeroChangeSound(numeroMetge, numeroInfermera);
 
   // Trobar el número següent amb cita reservada
   const getNumeroSeguent = (tipus: 'metge' | 'infermera', actual: number) => {
