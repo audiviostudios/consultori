@@ -101,23 +101,6 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Enllaç a pantalla de números */}
-      <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 max-w-4xl">
-        <Link to="/pantalla">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-primary/10 hover:bg-primary/20 border-2 border-primary/30 rounded-xl cursor-pointer transition-all"
-          >
-            <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-            <span className="text-sm sm:text-lg font-semibold text-primary text-center">
-              Veure per quin número estan visitant
-            </span>
-          </motion.div>
-        </Link>
-      </div>
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-4xl">
         {diesVisita.length === 0 ? (
@@ -321,6 +304,22 @@ const Index = () => {
                     transition={{ delay: 0.2 }}
                   >
                     <CancelBookingSection />
+                  </motion.div>
+
+                  {/* Enllaç a pantalla de números */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <Link to="/pantalla">
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-primary/10 hover:bg-primary/20 border-2 border-primary/30 rounded-xl cursor-pointer transition-all">
+                        <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+                        <span className="text-sm sm:text-lg font-semibold text-primary text-center">
+                          Veure per quin número estan visitant
+                        </span>
+                      </div>
+                    </Link>
                   </motion.div>
 
                   {/* Missatge si no hi ha serveis actius */}
