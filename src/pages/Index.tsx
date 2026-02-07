@@ -224,7 +224,7 @@ const Index = () => {
                             maxTandes={selectedDia.max_tandes_metge}
                             citesOcupades={cites}
                             diaVisitaId={selectedDia.id}
-                            titol="Selecciona el teu número"
+                            titol="Tria número de torn disponible"
                             dataVisita={selectedDia.data}
                           />
                         </CardContent>
@@ -246,7 +246,7 @@ const Index = () => {
                             maxTandes={selectedDia.max_tandes_infermera}
                             citesOcupades={cites}
                             diaVisitaId={selectedDia.id}
-                            titol="Selecciona el teu número"
+                            titol="Tria número de torn disponible"
                             dataVisita={selectedDia.data}
                           />
                         </CardContent>
@@ -276,7 +276,7 @@ const Index = () => {
                               maxTandes={selectedDia.max_tandes_grip}
                               citesOcupades={cites}
                               diaVisitaId={selectedDia.id}
-                              titol="Selecciona el teu número"
+                              titol="Tria número de torn disponible"
                               dataVisita={selectedDia.data}
                             />
                           </CardContent>
@@ -297,7 +297,7 @@ const Index = () => {
                               maxTandes={selectedDia.max_tandes_covid}
                               citesOcupades={cites}
                               diaVisitaId={selectedDia.id}
-                              titol="Selecciona el teu número"
+                              titol="Tria número de torn disponible"
                               dataVisita={selectedDia.data}
                             />
                           </CardContent>
