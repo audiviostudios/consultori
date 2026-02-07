@@ -171,6 +171,9 @@ const StaffDashboard = () => {
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
   
+  const staffRole = sessionStorage.getItem('staff_role') as 'metge' | 'infermera' | null;
+  const isAuthenticated = sessionStorage.getItem('staff_authenticated') === 'true';
+  
   const selectedDia = diesVisita[selectedDiaIndex] || null;
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
   const { data: numerosActuals = [] } = useNumeroActual();
@@ -179,9 +182,6 @@ const StaffDashboard = () => {
 
   const numeroActualData = numerosActuals.find(n => n.tipus === staffRole);
   const [nomProfessional, setNomProfessional] = useState('');
-
-  const staffRole = sessionStorage.getItem('staff_role') as 'metge' | 'infermera' | null;
-  const isAuthenticated = sessionStorage.getItem('staff_authenticated') === 'true';
 
   // Dades de receptes i consultes
   const { data: receptes = [] } = useReceptes();
