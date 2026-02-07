@@ -123,6 +123,25 @@ export function useEliminarCita() {
   });
 }
 
+export function useEliminarCitesMultiples() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids }: { ids: string[] }) => {
+      const { error } = await supabase
+        .from('cites')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw error;
+      return ids;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cites'] });
+    },
+  });
+}
+
 export function useActualitzarEstatCita() {
   const queryClient = useQueryClient();
 

@@ -3,16 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, Heart, Syringe, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, Heart, Syringe, RefreshCw, Users, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
-import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita, useCitesDia, useEliminarCita, useEliminarCitesMultiples } from '@/hooks/useDiesVisita';
 import { useCleanupData } from '@/hooks/useCleanupData';
-import { DiaVisita } from '@/lib/types';
+import { DiaVisita, Cita } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -140,9 +143,16 @@ const AdminConfig = () => {
   const crearDia = useCrearDiaVisita();
   const actualitzarDia = useActualitzarDiaVisita();
   const eliminarDia = useEliminarDiaVisita();
+  const eliminarCita = useEliminarCita();
+  const eliminarCitesMultiples = useEliminarCitesMultiples();
   const cleanupData = useCleanupData();
   
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [selectedDiaPerCites, setSelectedDiaPerCites] = useState<string | undefined>(undefined);
+  const [selectedCites, setSelectedCites] = useState<Set<string>>(new Set());
+  
+  // Obtenir cites del dia seleccionat
+  const { data: citesDelDia = [] } = useCitesDia(selectedDiaPerCites);
   
   // Dates que ja tenen visita configurada
   const diesExistents = diesVisita.map(d => new Date(d.data));
@@ -226,6 +236,55 @@ const AdminConfig = () => {
       toast.success('Dia eliminat');
     } catch (error) {
       toast.error('Error al eliminar');
+    }
+  };
+
+  // Funcions per gestionar cites
+  const handleToggleCita = (citaId: string) => {
+    setSelectedCites(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(citaId)) {
+        newSet.delete(citaId);
+      } else {
+        newSet.add(citaId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllCites = () => {
+    if (selectedCites.size === citesDelDia.length) {
+      setSelectedCites(new Set());
+    } else {
+      setSelectedCites(new Set(citesDelDia.map(c => c.id)));
+    }
+  };
+
+  const handleEliminarCita = async (id: string) => {
+    try {
+      await eliminarCita.mutateAsync({ id });
+      setSelectedCites(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      toast.success('Cita eliminada');
+    } catch (error) {
+      toast.error('Error al eliminar la cita');
+    }
+  };
+
+  const handleEliminarCitesSeleccionades = async () => {
+    if (selectedCites.size === 0) return;
+    
+    if (!confirm(`Estàs segur que vols eliminar ${selectedCites.size} cita${selectedCites.size > 1 ? 's' : ''}?`)) return;
+    
+    try {
+      await eliminarCitesMultiples.mutateAsync({ ids: Array.from(selectedCites) });
+      setSelectedCites(new Set());
+      toast.success(`${selectedCites.size} cita${selectedCites.size > 1 ? 's' : ''} eliminada${selectedCites.size > 1 ? 'es' : ''}`);
+    } catch (error) {
+      toast.error('Error al eliminar les cites');
     }
   };
 
@@ -318,6 +377,121 @@ const AdminConfig = () => {
                   Afegir {selectedDates.length > 0 ? `${selectedDates.length} dia${selectedDates.length > 1 ? 's' : ''}` : 'dies'}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Gestió de cites */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Gestió de cites
+              </CardTitle>
+              <CardDescription>
+                Selecciona un dia per veure i gestionar les cites reservades
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select value={selectedDiaPerCites} onValueChange={(value) => {
+                setSelectedDiaPerCites(value);
+                setSelectedCites(new Set());
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un dia..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {diesVisita.map((dia) => (
+                    <SelectItem key={dia.id} value={dia.id}>
+                      {format(new Date(dia.data), "EEEE, d MMMM", { locale: ca })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedDiaPerCites && citesDelDia.length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No hi ha cites per aquest dia</p>
+                </div>
+              )}
+
+              {selectedDiaPerCites && citesDelDia.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllCites}
+                    >
+                      {selectedCites.size === citesDelDia.length ? (
+                        <>
+                          <Square className="w-4 h-4 mr-2" />
+                          Desseleccionar tot
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="w-4 h-4 mr-2" />
+                          Seleccionar tot
+                        </>
+                      )}
+                    </Button>
+                    
+                    {selectedCites.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleEliminarCitesSeleccionades}
+                        disabled={eliminarCitesMultiples.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Eliminar {selectedCites.size} seleccionada{selectedCites.size > 1 ? 'es' : ''}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="divide-y rounded-lg border">
+                    {citesDelDia
+                      .sort((a, b) => a.numero_tanda - b.numero_tanda)
+                      .map((cita) => (
+                        <div
+                          key={cita.id}
+                          className="flex items-center justify-between p-3 hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedCites.has(cita.id)}
+                              onCheckedChange={() => handleToggleCita(cita.id)}
+                            />
+                            <div className="flex items-center gap-2">
+                              <Badge variant={cita.tipus === 'metge' ? 'default' : 'secondary'}>
+                                {cita.numero_tanda}
+                              </Badge>
+                              {cita.tipus === 'metge' ? (
+                                <Stethoscope className="w-4 h-4 text-primary" />
+                              ) : cita.tipus === 'infermera' ? (
+                                <Heart className="w-4 h-4 text-pink-500" />
+                              ) : (
+                                <Syringe className="w-4 h-4 text-amber-500" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{cita.nom_complet}</p>
+                              <p className="text-xs text-muted-foreground">{cita.telefon}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEliminarCita(cita.id)}
+                            disabled={eliminarCita.isPending}
+                          >
+                            <X className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
