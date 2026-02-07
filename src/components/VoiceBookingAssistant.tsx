@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Bot, Send, X, Volume2 } from 'lucide-react';
+import { Mic, MicOff, MessageCircle, Send, X, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useDiesVisita, useCitesDia, useCrearCita } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCrearCita } from '@/hooks/useDiesVisita';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { generatePin } from '@/lib/generatePin';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -38,35 +39,63 @@ export function VoiceBookingAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { data: diesVisita = [] } = useDiesVisita();
   const crearCita = useCrearCita();
 
-  // Obtenir disponibilitat per a cada dia
-  const getAvailableSlots = (diaId: string, tipus: 'metge' | 'infermera', maxTandes: number, citesOcupades: any[]) => {
-    const ocupades = citesOcupades.filter(c => c.tipus === tipus).map(c => c.numero_tanda);
-    return Array.from({ length: maxTandes }, (_, i) => i + 1).filter(n => !ocupades.includes(n));
-  };
+  const speak = useCallback(async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
 
-  const speak = useCallback((text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ca-ES';
-      utterance.rate = 0.9;
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      synthRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      if (!response.ok) {
+        throw new Error('TTS request failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.audioContent) {
+        const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+        audioRef.current = new Audio(audioUrl);
+        audioRef.current.onended = () => setIsSpeaking(false);
+        audioRef.current.onerror = () => setIsSpeaking(false);
+        await audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error TTS:', error);
+      setIsSpeaking(false);
+      // Fallback a síntesi del navegador
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ca-ES';
+        utterance.rate = 0.9;
+        utterance.onend = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+      }
     }
   }, []);
 
   const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
     }
+    setIsSpeaking(false);
   }, []);
 
   const startListening = useCallback(() => {
@@ -96,7 +125,7 @@ export function VoiceBookingAssistant() {
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  }, []);
+  }, [SpeechRecognitionAPI]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -106,12 +135,12 @@ export function VoiceBookingAssistant() {
   }, []);
 
   const processBookingAction = async (content: string) => {
-    // Buscar JSON d'acció de reserva al contingut
     const jsonMatch = content.match(/\{"action":\s*"BOOK".*?\}/s);
     if (jsonMatch) {
       try {
         const action: BookingAction = JSON.parse(jsonMatch[0]);
         if (action.action === 'BOOK' && action.data) {
+          const pin = generatePin();
           await crearCita.mutateAsync({
             dia_visita_id: action.data.dia_visita_id,
             tipus: action.data.tipus,
@@ -119,8 +148,9 @@ export function VoiceBookingAssistant() {
             nom_complet: action.data.nom_complet,
             telefon: action.data.telefon,
             email: action.data.email,
+            pin_cancelacio: pin,
           });
-          toast.success('Cita reservada correctament!');
+          toast.success(`Cita reservada! El teu PIN de cancel·lació és: ${pin}`);
           return content.replace(jsonMatch[0], '');
         }
       } catch (e) {
@@ -139,7 +169,6 @@ export function VoiceBookingAssistant() {
     setIsLoading(true);
 
     try {
-      // Preparar informació dels dies disponibles
       const availableDays = diesVisita.map(dia => ({
         id: dia.id,
         data: dia.data,
@@ -202,10 +231,8 @@ export function VoiceBookingAssistant() {
         }
       }
 
-      // Processar accions de reserva
       const cleanContent = await processBookingAction(assistantContent);
       
-      // Actualitzar missatge final
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === 'assistant') {
@@ -216,7 +243,7 @@ export function VoiceBookingAssistant() {
         return prev;
       });
 
-      // Llegir resposta en veu alta
+      // Llegir resposta amb veu ElevenLabs
       speak(cleanContent.replace(/[#*`]/g, ''));
 
     } catch (error) {
@@ -235,7 +262,7 @@ export function VoiceBookingAssistant() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const welcome = 'Hola! Sóc l\'assistent virtual del Consultori de l\'Albagés. Puc ajudar-te a demanar cita amb el metge o la infermera. Què necessites?';
+      const welcome = 'Hola! Sóc l\'Alba, l\'assistent virtual del Consultori de l\'Albagés. Puc ajudar-te a demanar cita amb el metge o la infermera. Què necessites?';
       setMessages([{ role: 'assistant', content: welcome }]);
       speak(welcome);
     }
@@ -243,15 +270,34 @@ export function VoiceBookingAssistant() {
 
   return (
     <>
-      {/* Botó flotant */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50"
-      >
-        <Bot className="w-8 h-8" />
-      </motion.button>
+      {/* Botó integrat a la pàgina - NO flotant */}
+      {!isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card 
+            className="cursor-pointer border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors"
+            onClick={() => setIsOpen(true)}
+          >
+            <CardContent className="py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">Parla amb l'Alba</h3>
+                  <p className="text-sm text-muted-foreground">L'assistent virtual que t'ajuda a agendar visita</p>
+                </div>
+                <Button variant="default" size="sm">
+                  Començar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Modal de l'assistent */}
       <AnimatePresence>
@@ -273,8 +319,8 @@ export function VoiceBookingAssistant() {
               <Card className="max-h-[80vh] flex flex-col">
                 <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
                   <CardTitle className="flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-primary" />
-                    Assistent de Cites
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                    L'Alba - Assistent de Cites
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     {isSpeaking && (
