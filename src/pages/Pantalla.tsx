@@ -17,6 +17,12 @@ const getCognom = (nomComplet: string): string => {
   return parts[0]; // Si només hi ha un nom, el retorna
 };
 
+// Extreu les inicials d'un nom complet (p.ex. "Paco Seró" -> "P. S.")
+const getInicials = (nomComplet: string): string => {
+  const parts = nomComplet.trim().split(' ').filter(p => p.length > 0);
+  return parts.map(part => part[0].toUpperCase() + '.').join(' ');
+};
+
 const LlistaTorns = ({ 
   cites, 
   tipus, 
@@ -92,9 +98,9 @@ const NumeroDisplay = ({
 }) => {
   const tipusCita = tipus.toLowerCase() as 'metge' | 'infermera';
   
-  // Trobar el cognom del pacient actual
+  // Trobar les inicials del pacient actual
   const citaActual = cites.find(c => c.tipus === tipusCita && c.numero_tanda === numero);
-  const cognomActual = citaActual ? getCognom(citaActual.nom_complet) : null;
+  const inicialsActual = citaActual ? getInicials(citaActual.nom_complet) : null;
   
   return (
     <motion.div
@@ -133,9 +139,9 @@ const NumeroDisplay = ({
           </motion.div>
         </AnimatePresence>
         
-        {cognomActual ? (
+        {inicialsActual ? (
           <p className={`text-lg sm:text-xl md:text-2xl font-semibold ${textColor} mt-1`}>
-            {cognomActual}
+            {inicialsActual}
           </p>
         ) : (
           <p className="text-base sm:text-lg text-muted-foreground mt-1">
