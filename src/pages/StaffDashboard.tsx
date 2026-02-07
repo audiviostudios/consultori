@@ -22,12 +22,18 @@ interface CitaCardProps {
   cita: Cita;
   isActive: boolean;
   onSelect: () => void;
+  onAssistit: () => void;
   onNoAssistit: () => void;
 }
 
-function CitaCard({ cita, isActive, onSelect, onNoAssistit }: CitaCardProps) {
+function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit }: CitaCardProps) {
+  const handleAssistit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAssistit();
+  };
+
   const handleNoAssistit = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que es propagui el clic a la targeta
+    e.stopPropagation();
     onNoAssistit();
   };
 
@@ -49,13 +55,22 @@ function CitaCard({ cita, isActive, onSelect, onNoAssistit }: CitaCardProps) {
         <div className="flex items-center gap-1">
           {isActive && <Badge className="text-xs">Visitant</Badge>}
           {isActive && (
-            <button
-              onClick={handleNoAssistit}
-              className="w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 flex items-center justify-center transition-colors"
-              title="No ha assistit"
-            >
-              <X className="w-3.5 h-3.5 text-destructive-foreground" />
-            </button>
+            <>
+              <button
+                onClick={handleAssistit}
+                className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-colors"
+                title="Marcar com a assistit"
+              >
+                <CheckCircle className="w-3.5 h-3.5 text-white" />
+              </button>
+              <button
+                onClick={handleNoAssistit}
+                className="w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 flex items-center justify-center transition-colors"
+                title="No ha assistit"
+              >
+                <X className="w-3.5 h-3.5 text-destructive-foreground" />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -273,6 +288,19 @@ const StaffDashboard = () => {
     }
   };
 
+  const handleAssistit = async () => {
+    if (!staffRole) return;
+    try {
+      const citaActual = citesFiltered.find(c => c.numero_tanda === numeroActual);
+      if (citaActual) {
+        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'visitat' });
+        toast.success('Pacient marcat com a assistit');
+      }
+    } catch (error) {
+      toast.error('Error al marcar');
+    }
+  };
+
   const handleNoAssistit = async () => {
     if (!staffRole) return;
     try {
@@ -449,6 +477,7 @@ const StaffDashboard = () => {
                               cita={cita}
                               isActive={cita.numero_tanda === numeroActual}
                               onSelect={() => handleSelectCita(cita.numero_tanda)}
+                              onAssistit={handleAssistit}
                               onNoAssistit={handleNoAssistit}
                             />
                           ))}
