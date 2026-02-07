@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { User, Phone, Mail, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { TipusCita, Cita } from '@/lib/types';
+import { TipusCita, Cita, DiaVisita } from '@/lib/types';
 import { useCrearCita } from '@/hooks/useDiesVisita';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
@@ -14,10 +14,9 @@ import { generatePin } from '@/lib/generatePin';
 
 interface AddCitaDialogProps {
   diaVisitaId: string;
-  tipus: TipusCita;
-  maxTandes: number;
+  tipus: 'metge' | 'infermera';
+  diaVisita: DiaVisita;
   citesOcupades: Cita[];
-  dataVisita?: string;
 }
 
 const formSchema = z.object({
@@ -26,8 +25,15 @@ const formSchema = z.object({
   email: z.string().trim().email('Correu electrònic no vàlid').max(255).optional().or(z.literal('')),
 });
 
-export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, dataVisita }: AddCitaDialogProps) {
+const TIPUS_OPTIONS: { value: TipusCita; label: string }[] = [
+  { value: 'infermera', label: 'Infermera' },
+  { value: 'grip', label: 'Vacuna Grip' },
+  { value: 'covid', label: 'Vacuna COVID' },
+];
+
+export function AddCitaDialog({ diaVisitaId, tipus, diaVisita, citesOcupades }: AddCitaDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedTipus, setSelectedTipus] = useState<TipusCita>(tipus);
   const [selectedTanda, setSelectedTanda] = useState<string>('');
   const [formData, setFormData] = useState({
     nom_complet: '',
@@ -38,12 +44,45 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
   
   const crearCita = useCrearCita();
 
+  // Per la infermera, mostrar opcions de tipus si grip o covid estan actius
+  const tipusDisponibles = useMemo(() => {
+    if (tipus === 'metge') return [];
+    
+    const opcions: { value: TipusCita; label: string }[] = [
+      { value: 'infermera', label: 'Infermera' },
+    ];
+    
+    if (diaVisita.vacunes_grip_actiu) {
+      opcions.push({ value: 'grip', label: 'Vacuna Grip' });
+    }
+    if (diaVisita.vacunes_covid_actiu) {
+      opcions.push({ value: 'covid', label: 'Vacuna COVID' });
+    }
+    
+    return opcions;
+  }, [tipus, diaVisita]);
+
+  const maxTandes = useMemo(() => {
+    switch (selectedTipus) {
+      case 'metge': return diaVisita.max_tandes_metge;
+      case 'infermera': return diaVisita.max_tandes_infermera;
+      case 'grip': return diaVisita.max_tandes_grip;
+      case 'covid': return diaVisita.max_tandes_covid;
+      default: return 10;
+    }
+  }, [selectedTipus, diaVisita]);
+
   const tandesOcupades = citesOcupades
-    .filter(c => c.tipus === tipus)
+    .filter(c => c.tipus === selectedTipus)
     .map(c => c.numero_tanda);
 
   const tandesDisponibles = Array.from({ length: maxTandes }, (_, i) => i + 1)
     .filter(n => !tandesOcupades.includes(n));
+
+  const handleTipusChange = (newTipus: TipusCita) => {
+    setSelectedTipus(newTipus);
+    setSelectedTanda(''); // Reset tanda when tipus changes
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +110,7 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
     try {
       await crearCita.mutateAsync({
         dia_visita_id: diaVisitaId,
-        tipus,
+        tipus: selectedTipus,
         numero_tanda: numeroTanda,
         pin_cancelacio: pin,
         ...formData,
@@ -84,8 +123,8 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
             email: formData.email,
             nom: formData.nom_complet,
             numero_tanda: numeroTanda,
-            tipus,
-            data: dataVisita || new Date().toISOString(),
+            tipus: selectedTipus,
+            data: diaVisita.data || new Date().toISOString(),
             pin_cancelacio: pin,
           },
         }).catch(console.error);
@@ -106,6 +145,7 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
   const resetForm = () => {
     setFormData({ nom_complet: '', telefon: '', email: '' });
     setSelectedTanda('');
+    setSelectedTipus(tipus);
     setErrors({});
   };
 
@@ -116,7 +156,27 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
     }
   };
 
-  if (tandesDisponibles.length === 0) {
+  // Comprovar si hi ha alguna tanda disponible per a algun tipus
+  const hiHaTandesDisponibles = useMemo(() => {
+    if (tipus === 'metge') {
+      const ocupades = citesOcupades.filter(c => c.tipus === 'metge').map(c => c.numero_tanda);
+      return Array.from({ length: diaVisita.max_tandes_metge }, (_, i) => i + 1).some(n => !ocupades.includes(n));
+    }
+    
+    // Per infermera, comprovar tots els tipus disponibles
+    const tipusAComprovar: TipusCita[] = ['infermera'];
+    if (diaVisita.vacunes_grip_actiu) tipusAComprovar.push('grip');
+    if (diaVisita.vacunes_covid_actiu) tipusAComprovar.push('covid');
+    
+    return tipusAComprovar.some(t => {
+      const max = t === 'infermera' ? diaVisita.max_tandes_infermera : 
+                  t === 'grip' ? diaVisita.max_tandes_grip : diaVisita.max_tandes_covid;
+      const ocupades = citesOcupades.filter(c => c.tipus === t).map(c => c.numero_tanda);
+      return Array.from({ length: max }, (_, i) => i + 1).some(n => !ocupades.includes(n));
+    });
+  }, [tipus, diaVisita, citesOcupades]);
+
+  if (!hiHaTandesDisponibles) {
     return null;
   }
 
@@ -134,6 +194,25 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Selector de tipus per a infermera */}
+          {tipus === 'infermera' && tipusDisponibles.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="tipus">Tipus de cita</Label>
+              <Select value={selectedTipus} onValueChange={(v) => handleTipusChange(v as TipusCita)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tipus..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tipusDisponibles.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="tanda">Número de tanda</Label>
             <Select value={selectedTanda} onValueChange={setSelectedTanda}>
@@ -148,6 +227,9 @@ export function AddCitaDialog({ diaVisitaId, tipus, maxTandes, citesOcupades, da
                 ))}
               </SelectContent>
             </Select>
+            {tandesDisponibles.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hi ha tandes disponibles per aquest tipus</p>
+            )}
           </div>
 
           <div className="space-y-2">

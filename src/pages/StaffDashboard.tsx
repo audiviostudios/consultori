@@ -467,9 +467,8 @@ const StaffDashboard = () => {
                         <AddCitaDialog
                           diaVisitaId={selectedDia.id}
                           tipus={staffRole!}
-                          maxTandes={staffRole === 'metge' ? selectedDia.max_tandes_metge : selectedDia.max_tandes_infermera}
+                          diaVisita={selectedDia}
                           citesOcupades={cites}
-                          dataVisita={selectedDia.data}
                         />
                       )}
                     </div>
