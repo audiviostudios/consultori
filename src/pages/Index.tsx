@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { Calendar, Stethoscope, Heart, Syringe, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Stethoscope, Heart, Syringe, Phone, ChevronLeft, ChevronRight, Pill } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { TandaSelector } from '@/components/TandaSelector';
 import { ConsultaForm } from '@/components/ConsultaForm';
 import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
 import { CancelBookingSection } from '@/components/CancelBookingSection';
+import { ReceptaForm } from '@/components/ReceptaForm';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DiaVisita } from '@/lib/types';
@@ -174,14 +175,18 @@ const Index = () => {
 
             {selectedDia && (
               <Tabs defaultValue="cites" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsList className="grid w-full grid-cols-3 h-12">
                   <TabsTrigger value="cites" className="text-base">
                     <Calendar className="w-4 h-4 mr-2" />
                     Demanar tanda
                   </TabsTrigger>
                   <TabsTrigger value="consulta" className="text-base">
                     <Phone className="w-4 h-4 mr-2" />
-                    Consulta telefònica
+                    Consulta
+                  </TabsTrigger>
+                  <TabsTrigger value="receptes" className="text-base">
+                    <Pill className="w-4 h-4 mr-2" />
+                    Receptes
                   </TabsTrigger>
                 </TabsList>
 
@@ -333,6 +338,16 @@ const Index = () => {
                         <ConsultaForm tipus="infermera" />
                       </div>
                     )}
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="receptes" className="space-y-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="max-w-md mx-auto"
+                  >
+                    <ReceptaForm />
                   </motion.div>
                 </TabsContent>
               </Tabs>

@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Stethoscope, Heart, ArrowRight } from 'lucide-react';
+import { Stethoscope, Heart, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useCitesDia, useDiaVisitaActual } from '@/hooks/useDiesVisita';
 import { useNumeroChangeSound } from '@/hooks/useNumeroChangeSound';
@@ -27,7 +29,18 @@ const Pantalla = () => {
   const seguentInfermera = getNumeroSeguent('infermera', numeroInfermera);
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Botó tornar */}
+      <div className="absolute top-4 left-4 z-10">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Tornar
+          </Link>
+        </Button>
+      </div>
+
+      <div className="flex-1 flex">
       {/* Metge */}
       <div className="flex-1 flex flex-col items-center justify-center border-r border-border">
         <motion.div
@@ -123,6 +136,7 @@ const Pantalla = () => {
             </motion.div>
           )}
         </motion.div>
+      </div>
       </div>
     </div>
   );
