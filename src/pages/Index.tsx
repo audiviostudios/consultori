@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -10,7 +11,6 @@ import { TandaSelector } from '@/components/TandaSelector';
 import { ConsultaForm } from '@/components/ConsultaForm';
 import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
 import { CancelBookingSection } from '@/components/CancelBookingSection';
-
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DiaVisita } from '@/lib/types';
@@ -91,6 +91,24 @@ const Index = () => {
           </motion.div>
         </div>
       </header>
+
+      {/* Enllaç a pantalla de números */}
+      <div className="container mx-auto px-4 pt-6 max-w-4xl">
+        <Link to="/pantalla">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center justify-center gap-3 p-4 bg-primary/10 hover:bg-primary/20 border-2 border-primary/30 rounded-xl cursor-pointer transition-all"
+          >
+            <Stethoscope className="w-6 h-6 text-primary" />
+            <span className="text-lg font-semibold text-primary">
+              Saber per quin número estan visitant actualment
+            </span>
+          </motion.div>
+        </Link>
+      </div>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {diesVisita.length === 0 ? (
