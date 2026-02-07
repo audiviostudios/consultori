@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, User, Phone, Mail, X } from 'lucide-react';
+import { Check, User, Phone, Mail, X, Copy, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { TipusCita, Cita } from '@/lib/types';
 import { useCrearCita } from '@/hooks/useDiesVisita';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import { generatePin } from '@/lib/generatePin';
 
 interface TandaSelectorProps {
   tipus: TipusCita;
@@ -30,6 +31,7 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
   const [selectedTanda, setSelectedTanda] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState<string>('');
   const [formData, setFormData] = useState({
     nom_complet: '',
     telefon: '',
@@ -48,6 +50,7 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
     setSelectedTanda(numero);
     setIsDialogOpen(true);
     setIsConfirmed(false);
+    setGeneratedPin('');
     setFormData({ nom_complet: '', telefon: '', email: '' });
     setErrors({});
   };
@@ -67,13 +70,18 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
       return;
     }
 
+    const pin = generatePin();
+
     try {
       await crearCita.mutateAsync({
         dia_visita_id: diaVisitaId,
         tipus,
         numero_tanda: selectedTanda!,
+        pin_cancelacio: pin,
         ...formData,
       });
+      
+      setGeneratedPin(pin);
       
       // Enviar recordatori per email (en segon pla)
       supabase.functions.invoke('enviar-recordatori', {
@@ -83,6 +91,7 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
           numero_tanda: selectedTanda,
           tipus,
           data: dataVisita || new Date().toISOString(),
+          pin_cancelacio: pin,
         },
       }).catch(console.error);
       
@@ -96,6 +105,11 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
         toast.error('Error al reservar la cita');
       }
     }
+  };
+
+  const copyPin = () => {
+    navigator.clipboard.writeText(generatedPin);
+    toast.success('PIN copiat!');
   };
 
   return (
@@ -146,27 +160,44 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center py-8 space-y-4"
+                className="flex flex-col items-center py-6 space-y-4"
               >
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', delay: 0.2 }}
-                  className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center"
+                  className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center"
                 >
-                  <Check className="w-10 h-10 text-success" />
+                  <Check className="w-8 h-8 text-success" />
                 </motion.div>
                 
                 <div className="text-center space-y-2">
-                  <p className="text-4xl font-bold text-primary">Tanda {selectedTanda}</p>
+                  <p className="text-3xl font-bold text-primary">Tanda {selectedTanda}</p>
                   <p className="text-muted-foreground">
                     Sigues puntual i vine una estona abans
                   </p>
                 </div>
 
-                <div className="bg-accent/50 rounded-lg p-4 text-center w-full">
+                {/* PIN de cancel·lació */}
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 w-full space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <KeyRound className="w-4 h-4 text-warning" />
+                    <p className="text-sm font-medium text-warning">PIN de cancel·lació</p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-2xl font-mono font-bold tracking-widest">{generatedPin}</p>
+                    <Button variant="ghost" size="icon" onClick={copyPin} className="h-8 w-8">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Guarda'l per si necessites cancel·lar la cita
+                  </p>
+                </div>
+
+                <div className="bg-accent/50 rounded-lg p-3 text-center w-full">
                   <p className="text-sm text-muted-foreground">
-                    Rebràs un recordatori al teu correu electrònic
+                    Rebràs un recordatori amb el PIN al teu correu
                   </p>
                 </div>
               </motion.div>

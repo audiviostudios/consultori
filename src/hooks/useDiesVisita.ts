@@ -88,7 +88,7 @@ export function useCrearCita() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (cita: Omit<Cita, 'id' | 'created_at'>) => {
+    mutationFn: async (cita: Omit<Cita, 'id' | 'created_at'> & { pin_cancelacio?: string }) => {
       const { data, error } = await supabase
         .from('cites')
         .insert(cita)

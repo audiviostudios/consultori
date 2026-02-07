@@ -21,6 +21,7 @@ export interface Cita {
   nom_complet: string;
   telefon: string;
   email: string;
+  pin_cancelacio?: string;
   created_at: string;
 }
 

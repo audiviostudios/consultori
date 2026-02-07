@@ -43,6 +43,7 @@ export type Database = {
           id: string
           nom_complet: string
           numero_tanda: number
+          pin_cancelacio: string | null
           telefon: string
           tipus: string
         }
@@ -53,6 +54,7 @@ export type Database = {
           id?: string
           nom_complet: string
           numero_tanda: number
+          pin_cancelacio?: string | null
           telefon: string
           tipus: string
         }
@@ -63,6 +65,7 @@ export type Database = {
           id?: string
           nom_complet?: string
           numero_tanda?: number
+          pin_cancelacio?: string | null
           telefon?: string
           tipus?: string
         }
