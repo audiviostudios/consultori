@@ -12,6 +12,7 @@ import { ConsultaForm } from '@/components/ConsultaForm';
 import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
 import { CancelBookingSection } from '@/components/CancelBookingSection';
 import { ReceptaForm } from '@/components/ReceptaForm';
+import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DiaVisita } from '@/lib/types';
@@ -77,6 +78,11 @@ const Index = () => {
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          {/* Install PWA Button */}
+          <div className="flex justify-center mb-3">
+            <InstallPWAButton />
+          </div>
+          
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
