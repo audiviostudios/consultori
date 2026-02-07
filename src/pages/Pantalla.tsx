@@ -91,7 +91,7 @@ const LlistaTorns = ({
             <span className={`text-[10px] sm:text-xs truncate max-w-[55px] sm:max-w-[65px] text-center ${
               cita ? (isVisitat ? 'text-green-700' : isNoAssistit ? 'text-red-700' : 'text-foreground') : 'text-muted-foreground/40'
             }`}>
-              {cita ? getCognom(cita.nom_complet) : '—'}
+              {cita ? getInicials(cita.nom_complet) : '—'}
             </span>
             {isActual && (
               <span className={`text-[9px] sm:text-[10px] font-semibold ${textColor} mt-0.5`}>
