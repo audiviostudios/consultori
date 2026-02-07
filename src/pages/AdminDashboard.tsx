@@ -1,17 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { useDiaVisitaActual, useCitesDia } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
 import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
-import { Cita, ConsultaTelefonica } from '@/lib/types';
+import { Cita, ConsultaTelefonica, DiaVisita } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -89,11 +89,11 @@ interface DashboardSectionProps {
   tipus: 'metge' | 'infermera';
   icon: typeof Stethoscope;
   titol: string;
+  diaActual: DiaVisita | null;
+  cites: Cita[];
 }
 
-function DashboardSection({ tipus, icon: Icon, titol }: DashboardSectionProps) {
-  const { data: diaActual } = useDiaVisitaActual();
-  const { data: cites = [] } = useCitesDia(diaActual?.id);
+function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: DashboardSectionProps) {
   const { data: consultes = [] } = useConsultesTelefoniques(tipus);
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
@@ -153,7 +153,7 @@ function DashboardSection({ tipus, icon: Icon, titol }: DashboardSectionProps) {
           {citesFiltered.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                No hi ha cites programades
+                No hi ha cites programades per a aquest dia
               </CardContent>
             </Card>
           ) : (
@@ -196,9 +196,67 @@ function DashboardSection({ tipus, icon: Icon, titol }: DashboardSectionProps) {
   );
 }
 
+function DiaSelector({ dies, selectedIndex, onSelect }: { dies: DiaVisita[]; selectedIndex: number; onSelect: (index: number) => void }) {
+  const isAvui = (data: string) => data === format(new Date(), 'yyyy-MM-dd');
+
+  return (
+    <div className="flex items-center gap-2 mb-6">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onSelect(Math.max(0, selectedIndex - 1))}
+        disabled={selectedIndex === 0}
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </Button>
+      
+      <div className="flex-1 overflow-x-auto">
+        <div className="flex gap-2">
+          {dies.map((dia, index) => (
+            <button
+              key={dia.id}
+              onClick={() => onSelect(index)}
+              className={`
+                flex flex-col items-center justify-center p-3 rounded-xl border-2 min-w-[80px] transition-all
+                ${index === selectedIndex 
+                  ? 'border-primary bg-primary/10 text-primary' 
+                  : 'border-border hover:border-primary/50'
+                }
+                ${isAvui(dia.data) ? 'ring-2 ring-primary ring-offset-2' : ''}
+              `}
+            >
+              <span className="text-xs text-muted-foreground uppercase">
+                {format(new Date(dia.data), "MMM", { locale: ca })}
+              </span>
+              <span className="text-lg font-bold capitalize">
+                {format(new Date(dia.data), "EEE d", { locale: ca })}
+              </span>
+              {isAvui(dia.data) && <span className="text-[10px] font-medium text-primary">Avui</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onSelect(Math.min(dies.length - 1, selectedIndex + 1))}
+        disabled={selectedIndex === dies.length - 1}
+      >
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+}
+
 const AdminDashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
+  const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
+  
+  const selectedDia = diesVisita[selectedDiaIndex] || null;
+  const { data: cites = [] } = useCitesDia(selectedDia?.id);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -211,7 +269,7 @@ const AdminDashboard = () => {
     navigate('/admin/login');
   };
 
-  if (loading) {
+  if (loading || loadingDies) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -251,36 +309,85 @@ const AdminDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="metge" className="space-y-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-            <TabsTrigger value="metge" className="flex items-center gap-2">
-              <Stethoscope className="w-4 h-4" />
-              Metge
-            </TabsTrigger>
-            <TabsTrigger value="infermera" className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              Infermera
-            </TabsTrigger>
-          </TabsList>
+        {diesVisita.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">No hi ha dies de visita</h2>
+              <p className="text-muted-foreground mb-4">
+                Ves a configuració per crear dies de visita
+              </p>
+              <Button asChild>
+                <Link to="/admin/config">Anar a configuració</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Selector de dia */}
+            <DiaSelector 
+              dies={diesVisita} 
+              selectedIndex={selectedDiaIndex} 
+              onSelect={setSelectedDiaIndex} 
+            />
 
-          <TabsContent value="metge">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <DashboardSection tipus="metge" icon={Stethoscope} titol="Metge" />
-            </motion.div>
-          </TabsContent>
+            {selectedDia && (
+              <div className="mb-4 text-center py-2 px-4 bg-accent/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Gestionant cites del{' '}
+                  <span className="font-semibold text-foreground capitalize">
+                    {format(new Date(selectedDia.data), "EEEE, d 'de' MMMM", { locale: ca })}
+                  </span>
+                </p>
+              </div>
+            )}
 
-          <TabsContent value="infermera">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <DashboardSection tipus="infermera" icon={Heart} titol="Infermera" />
-            </motion.div>
-          </TabsContent>
-        </Tabs>
+            <Tabs defaultValue="metge" className="space-y-8">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+                <TabsTrigger value="metge" className="flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4" />
+                  Metge
+                </TabsTrigger>
+                <TabsTrigger value="infermera" className="flex items-center gap-2">
+                  <Heart className="w-4 h-4" />
+                  Infermera
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="metge">
+                <motion.div
+                  key={selectedDia?.id + '-metge'}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <DashboardSection 
+                    tipus="metge" 
+                    icon={Stethoscope} 
+                    titol="Metge" 
+                    diaActual={selectedDia}
+                    cites={cites}
+                  />
+                </motion.div>
+              </TabsContent>
+
+              <TabsContent value="infermera">
+                <motion.div
+                  key={selectedDia?.id + '-infermera'}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <DashboardSection 
+                    tipus="infermera" 
+                    icon={Heart} 
+                    titol="Infermera" 
+                    diaActual={selectedDia}
+                    cites={cites}
+                  />
+                </motion.div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </main>
     </div>
   );
