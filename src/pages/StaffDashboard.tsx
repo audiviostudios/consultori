@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, X } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, X, UserPlus } from 'lucide-react';
+import { AddCitaDialog } from '@/components/AddCitaDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -455,12 +456,23 @@ const StaffDashboard = () => {
               <TabsContent value="cites">
                 <Card>
                   <CardHeader className="pb-2 sm:pb-4">
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="truncate">
-                        {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
-                      </span>
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="truncate">
+                          {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
+                        </span>
+                      </CardTitle>
+                      {selectedDia && (
+                        <AddCitaDialog
+                          diaVisitaId={selectedDia.id}
+                          tipus={staffRole!}
+                          maxTandes={staffRole === 'metge' ? selectedDia.max_tandes_metge : selectedDia.max_tandes_infermera}
+                          citesOcupades={cites}
+                          dataVisita={selectedDia.data}
+                        />
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {citesFiltered.length === 0 ? (
