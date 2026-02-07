@@ -20,7 +20,7 @@ export interface Cita {
   numero_tanda: number;
   nom_complet: string;
   telefon: string;
-  email: string;
+  email?: string | null;
   pin_cancelacio?: string;
   created_at: string;
 }
@@ -30,7 +30,7 @@ export interface ConsultaTelefonica {
   tipus: 'metge' | 'infermera';
   nom_complet: string;
   telefon: string;
-  email: string;
+  email?: string | null;
   urgencia: 'baixa' | 'mitjana' | 'alta';
   motiu: string;
   atesa: boolean;

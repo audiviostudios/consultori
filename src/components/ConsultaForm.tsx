@@ -18,7 +18,7 @@ interface ConsultaFormProps {
 const formSchema = z.object({
   nom_complet: z.string().trim().min(2, 'El nom ha de tenir almenys 2 caràcters').max(100),
   telefon: z.string().trim().regex(/^[0-9]{9}$/, 'El telèfon ha de tenir 9 dígits'),
-  email: z.string().trim().email('Correu electrònic no vàlid').max(255),
+  email: z.string().trim().email('Correu electrònic no vàlid').max(255).optional().or(z.literal('')),
   motiu: z.string().trim().min(10, 'Explica breument el motiu').max(500),
   urgencia: z.enum(['baixa', 'mitjana', 'alta']),
 });
@@ -148,15 +148,14 @@ export function ConsultaForm({ tipus }: ConsultaFormProps) {
           <div className="space-y-2">
             <Label htmlFor={`email-${tipus}`} className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              Correu electrònic
+              Correu electrònic <span className="text-muted-foreground text-xs">(opcional)</span>
             </Label>
             <Input
               id={`email-${tipus}`}
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="joan@exemple.cat"
-              required
+              placeholder="joan@exemple.cat (opcional)"
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email}</p>

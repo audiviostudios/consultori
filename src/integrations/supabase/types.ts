@@ -39,7 +39,7 @@ export type Database = {
         Row: {
           created_at: string
           dia_visita_id: string
-          email: string
+          email: string | null
           id: string
           nom_complet: string
           numero_tanda: number
@@ -50,7 +50,7 @@ export type Database = {
         Insert: {
           created_at?: string
           dia_visita_id: string
-          email: string
+          email?: string | null
           id?: string
           nom_complet: string
           numero_tanda: number
@@ -61,7 +61,7 @@ export type Database = {
         Update: {
           created_at?: string
           dia_visita_id?: string
-          email?: string
+          email?: string | null
           id?: string
           nom_complet?: string
           numero_tanda?: number
@@ -107,7 +107,7 @@ export type Database = {
         Row: {
           atesa: boolean
           created_at: string
-          email: string
+          email: string | null
           id: string
           motiu: string
           nom_complet: string
@@ -118,7 +118,7 @@ export type Database = {
         Insert: {
           atesa?: boolean
           created_at?: string
-          email: string
+          email?: string | null
           id?: string
           motiu: string
           nom_complet: string
@@ -129,7 +129,7 @@ export type Database = {
         Update: {
           atesa?: boolean
           created_at?: string
-          email?: string
+          email?: string | null
           id?: string
           motiu?: string
           nom_complet?: string
@@ -221,7 +221,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
