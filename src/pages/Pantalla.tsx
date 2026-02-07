@@ -56,7 +56,18 @@ const LlistaTorns = ({
       {Array.from({ length: maxTorns }, (_, i) => i + 1).map(num => {
         const cita = citesDelTipus.find(c => c.numero_tanda === num);
         const isActual = num === numeroActual;
-        const isPast = num < numeroActual;
+        const isVisitat = cita?.estat_assistencia === 'visitat';
+        const isNoAssistit = cita?.estat_assistencia === 'no_assistit';
+        
+        // Determinar el color de fons
+        let bgClass = 'bg-secondary/50'; // Per defecte (pendent)
+        if (isActual) {
+          bgClass = 'bg-primary/20 ring-2 ring-primary scale-110';
+        } else if (isVisitat) {
+          bgClass = 'bg-green-500/30 ring-2 ring-green-500';
+        } else if (isNoAssistit) {
+          bgClass = 'bg-red-500/30 ring-2 ring-red-500';
+        }
         
         return (
           <motion.div
@@ -66,20 +77,32 @@ const LlistaTorns = ({
             transition={{ delay: num * 0.03 }}
             className={`
               flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl min-w-[60px] sm:min-w-[70px]
-              ${isActual ? 'bg-primary/20 ring-2 ring-primary scale-110' : 'bg-secondary/50'}
-              ${isPast ? 'opacity-30' : ''}
+              ${bgClass}
             `}
           >
-            <span className={`text-xl sm:text-2xl font-bold ${isActual ? textColor : 'text-foreground'}`}>
+            <span className={`text-xl sm:text-2xl font-bold ${
+              isActual ? textColor : 
+              isVisitat ? 'text-green-600' : 
+              isNoAssistit ? 'text-red-600' : 
+              'text-foreground'
+            }`}>
               {num}
             </span>
-            <span className={`text-[10px] sm:text-xs truncate max-w-[55px] sm:max-w-[65px] text-center ${cita ? 'text-foreground' : 'text-muted-foreground/40'}`}>
+            <span className={`text-[10px] sm:text-xs truncate max-w-[55px] sm:max-w-[65px] text-center ${
+              cita ? (isVisitat ? 'text-green-700' : isNoAssistit ? 'text-red-700' : 'text-foreground') : 'text-muted-foreground/40'
+            }`}>
               {cita ? getCognom(cita.nom_complet) : '—'}
             </span>
             {isActual && (
               <span className={`text-[9px] sm:text-[10px] font-semibold ${textColor} mt-0.5`}>
                 Actual
               </span>
+            )}
+            {isVisitat && !isActual && (
+              <CheckCircle className="w-3 h-3 text-green-600 mt-0.5" />
+            )}
+            {isNoAssistit && !isActual && (
+              <XCircle className="w-3 h-3 text-red-600 mt-0.5" />
             )}
           </motion.div>
         );

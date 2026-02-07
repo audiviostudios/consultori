@@ -22,6 +22,7 @@ export interface Cita {
   telefon: string;
   email?: string | null;
   pin_cancelacio?: string;
+  estat_assistencia?: 'visitat' | 'no_assistit' | null;
   created_at: string;
 }
 

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCitesDia, useActualitzarEstatCita } from '@/hooks/useDiesVisita';
 import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, useActualitzarEstatVisita } from '@/hooks/useNumeroActual';
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
@@ -197,6 +197,7 @@ const StaffDashboard = () => {
   const actualitzarNumero = useActualitzarNumero();
   const actualitzarNomProfessional = useActualitzarNomProfessional();
   const actualitzarEstatVisita = useActualitzarEstatVisita();
+  const actualitzarEstatCita = useActualitzarEstatCita();
 
   const numeroActualData = numerosActuals.find(n => n.tipus === staffRole);
   const [nomProfessional, setNomProfessional] = useState('');
@@ -253,11 +254,14 @@ const StaffDashboard = () => {
     if (!staffRole) return;
     try {
       // Si hi havia un pacient anterior i no s'ha marcat com no_assistit, marcar-lo com visitat
-      if (numeroActual > 0 && numeroActual !== numero && estatVisita !== 'no_assistit') {
-        await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: 'visitat' });
+      if (numeroActual > 0 && numeroActual !== numero) {
+        const citaAnterior = citesFiltered.find(c => c.numero_tanda === numeroActual);
+        if (citaAnterior && citaAnterior.estat_assistencia !== 'no_assistit') {
+          await actualitzarEstatCita.mutateAsync({ id: citaAnterior.id, estat_assistencia: 'visitat' });
+        }
       }
       
-      // Canviar al nou pacient (l'estat es reseteja a null automàticament)
+      // Canviar al nou pacient
       await actualitzarNumero.mutateAsync({ 
         tipus: staffRole, 
         numero, 
@@ -272,8 +276,11 @@ const StaffDashboard = () => {
   const handleNoAssistit = async () => {
     if (!staffRole) return;
     try {
-      await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: 'no_assistit' });
-      toast.info('Pacient marcat com no assistit');
+      const citaActual = citesFiltered.find(c => c.numero_tanda === numeroActual);
+      if (citaActual) {
+        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'no_assistit' });
+        toast.info('Pacient marcat com no assistit');
+      }
     } catch (error) {
       toast.error('Error al marcar');
     }

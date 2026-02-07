@@ -40,6 +40,7 @@ export type Database = {
           created_at: string
           dia_visita_id: string
           email: string | null
+          estat_assistencia: string | null
           id: string
           nom_complet: string
           numero_tanda: number
@@ -51,6 +52,7 @@ export type Database = {
           created_at?: string
           dia_visita_id: string
           email?: string | null
+          estat_assistencia?: string | null
           id?: string
           nom_complet: string
           numero_tanda: number
@@ -62,6 +64,7 @@ export type Database = {
           created_at?: string
           dia_visita_id?: string
           email?: string | null
+          estat_assistencia?: string | null
           id?: string
           nom_complet?: string
           numero_tanda?: number

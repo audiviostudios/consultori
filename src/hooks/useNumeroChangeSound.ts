@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-// URL del so de campana fort per canvi de número
-const BELL_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+// So de notificació local
+const NOTIFICATION_SOUND_URL = '/sounds/notification.mp3';
 
 export function useNumeroChangeSound(numeroMetge: number, numeroInfermera: number) {
   const prevMetgeRef = useRef(numeroMetge);
@@ -9,8 +9,8 @@ export function useNumeroChangeSound(numeroMetge: number, numeroInfermera: numbe
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Precarregar l'àudio de campana
-    audioRef.current = new Audio(BELL_SOUND_URL);
+    // Precarregar l'àudio
+    audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
     audioRef.current.volume = 1.0; // Volum màxim
   }, []);
 

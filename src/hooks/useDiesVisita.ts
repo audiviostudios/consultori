@@ -123,6 +123,27 @@ export function useEliminarCita() {
   });
 }
 
+export function useActualitzarEstatCita() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, estat_assistencia }: { id: string; estat_assistencia: 'visitat' | 'no_assistit' }) => {
+      const { data, error } = await supabase
+        .from('cites')
+        .update({ estat_assistencia })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cites'] });
+    },
+  });
+}
+
 export function useCrearDiaVisita() {
   const queryClient = useQueryClient();
   
