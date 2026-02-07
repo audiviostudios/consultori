@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Stethoscope, Heart, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
-import { useCitesDia, useDiaVisitaActual } from '@/hooks/useDiesVisita';
+import { useCitesDia, useDiaVisitaActual, useDiesVisita } from '@/hooks/useDiesVisita';
 import { useNumeroChangeSound } from '@/hooks/useNumeroChangeSound';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Cita } from '@/lib/types';
@@ -191,12 +191,18 @@ const NumeroDisplay = ({
 
 const Pantalla = () => {
   const { data: numerosActuals = [] } = useNumeroActual();
+  const { data: diesVisita = [] } = useDiesVisita();
   const { data: diaActual } = useDiaVisitaActual();
-  const { data: cites = [] } = useCitesDia(diaActual?.id);
   const isMobile = useIsMobile();
   
   const metgeData = numerosActuals.find(n => n.tipus === 'metge');
   const infermeraData = numerosActuals.find(n => n.tipus === 'infermera');
+
+  // Important: agafem les cites del mateix dia que està assignat al número actual
+  const diaVisitaIdPantalla = metgeData?.dia_visita_id || infermeraData?.dia_visita_id || diaActual?.id;
+  const { data: cites = [] } = useCitesDia(diaVisitaIdPantalla);
+
+  const diaPantalla = diesVisita.find(d => d.id === diaVisitaIdPantalla) || diaActual;
   
   const numeroMetge = metgeData?.numero || 0;
   const numeroInfermera = infermeraData?.numero || 0;
@@ -240,7 +246,7 @@ const Pantalla = () => {
             textColor="text-primary"
             seguentNumero={seguentMetge}
             cites={cites}
-            maxTorns={diaActual?.max_tandes_metge || 10}
+            maxTorns={diaPantalla?.max_tandes_metge || 10}
             nomProfessional={nomMetge}
           />
         </div>
@@ -255,7 +261,7 @@ const Pantalla = () => {
             textColor="text-accent-foreground"
             seguentNumero={seguentInfermera}
             cites={cites}
-            maxTorns={diaActual?.max_tandes_infermera || 10}
+            maxTorns={diaPantalla?.max_tandes_infermera || 10}
             nomProfessional={nomInfermera}
           />
         </div>

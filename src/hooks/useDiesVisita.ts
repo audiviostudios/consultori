@@ -104,6 +104,25 @@ export function useCrearCita() {
   });
 }
 
+export function useEliminarCita() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase
+        .from('cites')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cites'] });
+    },
+  });
+}
+
 export function useCrearDiaVisita() {
   const queryClient = useQueryClient();
   

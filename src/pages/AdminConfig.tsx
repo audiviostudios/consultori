@@ -30,7 +30,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
+            <CalendarIcon className="w-5 h-5 text-primary" />
             {dataFormatada}
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onDelete}>
@@ -40,7 +40,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Metge */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-2">
             <Stethoscope className="w-4 h-4" />
             <span className="font-medium">Metge</span>
@@ -62,7 +62,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
         </div>
 
         {/* Infermera */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-2">
             <Heart className="w-4 h-4" />
             <span className="font-medium">Infermera</span>
@@ -84,7 +84,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
         </div>
 
         {/* Vacunes Grip */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
           <div className="flex items-center gap-2">
             <Syringe className="w-4 h-4 text-warning" />
             <span className="font-medium">Vacunes Grip</span>
@@ -107,7 +107,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
         </div>
 
         {/* Vacunes COVID */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
           <div className="flex items-center gap-2">
             <Syringe className="w-4 h-4 text-primary" />
             <span className="font-medium">Vacunes COVID</span>
@@ -274,30 +274,32 @@ const AdminConfig = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-center">
-                <Calendar
-                  mode="multiple"
-                  selected={selectedDates}
-                  onSelect={(dates) => setSelectedDates(dates || [])}
-                  locale={ca}
-                  disabled={(date) => {
-                    // Deshabilitar dies passats
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (date < today) return true;
-                    // Deshabilitar dies que ja existeixen
-                    return diesExistents.some(d => 
-                      d.toDateString() === date.toDateString()
-                    );
-                  }}
-                  modifiers={{
-                    existing: diesExistents
-                  }}
-                  modifiersClassNames={{
-                    existing: 'bg-primary/20 text-primary font-bold'
-                  }}
-                  className={cn("p-3 pointer-events-auto rounded-md border")}
-                />
+              <div className="overflow-x-auto -mx-2 px-2">
+                <div className="flex justify-center min-w-max">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedDates}
+                    onSelect={(dates) => setSelectedDates(dates || [])}
+                    locale={ca}
+                    disabled={(date) => {
+                      // Deshabilitar dies passats
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      if (date < today) return true;
+                      // Deshabilitar dies que ja existeixen
+                      return diesExistents.some(d => 
+                        d.toDateString() === date.toDateString()
+                      );
+                    }}
+                    modifiers={{
+                      existing: diesExistents
+                    }}
+                    modifiersClassNames={{
+                      existing: 'bg-primary/20 text-primary font-bold'
+                    }}
+                    className={cn("p-3 pointer-events-auto rounded-md border")}
+                  />
+                </div>
               </div>
               
               {selectedDates.length > 0 && (
@@ -346,7 +348,7 @@ const AdminConfig = () => {
           {diesVisita.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No hi ha dies de visita configurats</p>
               </CardContent>
             </Card>
