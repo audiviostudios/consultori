@@ -178,7 +178,7 @@ const Index = () => {
                 <TabsList className="grid w-full grid-cols-3 h-12">
                   <TabsTrigger value="cites" className="text-base">
                     <Calendar className="w-4 h-4 mr-2" />
-                    Demanar tanda
+                    Cita
                   </TabsTrigger>
                   <TabsTrigger value="consulta" className="text-base">
                     <Phone className="w-4 h-4 mr-2" />
