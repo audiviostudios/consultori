@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, Check, X } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,16 +22,22 @@ interface CitaCardProps {
   cita: Cita;
   isActive: boolean;
   onSelect: () => void;
+  onNoAssistit: () => void;
 }
 
-function CitaCard({ cita, isActive, onSelect }: CitaCardProps) {
+function CitaCard({ cita, isActive, onSelect, onNoAssistit }: CitaCardProps) {
+  const handleNoAssistit = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que es propagui el clic a la targeta
+    onNoAssistit();
+  };
+
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onSelect}
       className={`
-        p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all
+        p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all relative
         ${isActive 
           ? 'border-primary bg-primary/5' 
           : 'border-border hover:border-primary/50'
@@ -40,7 +46,18 @@ function CitaCard({ cita, isActive, onSelect }: CitaCardProps) {
     >
       <div className="flex items-center justify-between mb-1 sm:mb-2">
         <span className="text-2xl sm:text-3xl font-bold text-primary">{cita.numero_tanda}</span>
-        {isActive && <Badge className="text-xs">Visitant</Badge>}
+        <div className="flex items-center gap-1">
+          {isActive && <Badge className="text-xs">Visitant</Badge>}
+          {isActive && (
+            <button
+              onClick={handleNoAssistit}
+              className="w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 flex items-center justify-center transition-colors"
+              title="No ha assistit"
+            >
+              <X className="w-3.5 h-3.5 text-destructive-foreground" />
+            </button>
+          )}
+        </div>
       </div>
       <p className="font-medium text-foreground text-sm sm:text-base truncate">{cita.nom_complet}</p>
       <p className="text-xs sm:text-sm text-muted-foreground">{cita.telefon}</p>
@@ -235,6 +252,12 @@ const StaffDashboard = () => {
   const handleSelectCita = async (numero: number) => {
     if (!staffRole) return;
     try {
+      // Si hi havia un pacient anterior i no s'ha marcat com no_assistit, marcar-lo com visitat
+      if (numeroActual > 0 && numeroActual !== numero && estatVisita !== 'no_assistit') {
+        await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: 'visitat' });
+      }
+      
+      // Canviar al nou pacient (l'estat es reseteja a null automàticament)
       await actualitzarNumero.mutateAsync({ 
         tipus: staffRole, 
         numero, 
@@ -246,13 +269,13 @@ const StaffDashboard = () => {
     }
   };
 
-  const handleMarcarEstat = async (estat: 'visitat' | 'no_assistit') => {
+  const handleNoAssistit = async () => {
     if (!staffRole) return;
     try {
-      await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: estat });
-      toast.success(estat === 'visitat' ? 'Pacient marcat com visitat' : 'Pacient marcat com no assistit');
+      await actualitzarEstatVisita.mutateAsync({ tipus: staffRole, estat_visita: 'no_assistit' });
+      toast.info('Pacient marcat com no assistit');
     } catch (error) {
-      toast.error('Error al marcar l\'estat');
+      toast.error('Error al marcar');
     }
   };
 
@@ -397,37 +420,11 @@ const StaffDashboard = () => {
               <TabsContent value="cites">
                 <Card>
                   <CardHeader className="pb-2 sm:pb-4">
-                    <CardTitle className="flex items-center justify-between text-sm sm:text-base">
-                      <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                        <span className="truncate">
-                          {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
-                        </span>
-                      </div>
-                      {numeroActual > 0 && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant={estatVisita === 'visitat' ? 'default' : 'outline'}
-                            className="h-8 bg-green-600 hover:bg-green-700 text-white border-green-600"
-                            onClick={() => handleMarcarEstat('visitat')}
-                            disabled={actualitzarEstatVisita.isPending}
-                          >
-                            <Check className="w-4 h-4 sm:mr-1" />
-                            <span className="hidden sm:inline">Visitat</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={estatVisita === 'no_assistit' ? 'default' : 'outline'}
-                            className="h-8 bg-red-600 hover:bg-red-700 text-white border-red-600"
-                            onClick={() => handleMarcarEstat('no_assistit')}
-                            disabled={actualitzarEstatVisita.isPending}
-                          >
-                            <X className="w-4 h-4 sm:mr-1" />
-                            <span className="hidden sm:inline">No assistit</span>
-                          </Button>
-                        </div>
-                      )}
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="truncate">
+                        {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -445,6 +442,7 @@ const StaffDashboard = () => {
                               cita={cita}
                               isActive={cita.numero_tanda === numeroActual}
                               onSelect={() => handleSelectCita(cita.numero_tanda)}
+                              onNoAssistit={handleNoAssistit}
                             />
                           ))}
                       </div>
