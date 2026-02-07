@@ -3,13 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
-import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
+import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional } from '@/hooks/useNumeroActual';
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
@@ -174,6 +175,10 @@ const StaffDashboard = () => {
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
+  const actualitzarNomProfessional = useActualitzarNomProfessional();
+
+  const numeroActualData = numerosActuals.find(n => n.tipus === staffRole);
+  const [nomProfessional, setNomProfessional] = useState('');
 
   const staffRole = sessionStorage.getItem('staff_role') as 'metge' | 'infermera' | null;
   const isAuthenticated = sessionStorage.getItem('staff_authenticated') === 'true';
@@ -190,6 +195,13 @@ const StaffDashboard = () => {
   // Subscripció a consultes telefòniques en temps real amb alerta sonora
   useConsultesRealtime(staffRole);
 
+  // Inicialitzar el nom del professional
+  useEffect(() => {
+    if (numeroActualData?.nom_professional) {
+      setNomProfessional(numeroActualData.nom_professional);
+    }
+  }, [numeroActualData?.nom_professional]);
+
   useEffect(() => {
     if (!isAuthenticated || !staffRole) {
       navigate('/admin/pin');
@@ -202,8 +214,21 @@ const StaffDashboard = () => {
     navigate('/admin/pin');
   };
 
+  const handleSaveNom = async () => {
+    if (!staffRole) return;
+    try {
+      await actualitzarNomProfessional.mutateAsync({ 
+        tipus: staffRole, 
+        nom_professional: nomProfessional.trim() 
+      });
+      toast.success('Nom guardat correctament');
+    } catch (error) {
+      toast.error('Error al guardar el nom');
+    }
+  };
+
   const citesFiltered = cites.filter(c => c.tipus === staffRole);
-  const numeroActual = numerosActuals.find(n => n.tipus === staffRole)?.numero || 0;
+  const numeroActual = numeroActualData?.numero || 0;
 
   const handleSelectCita = async (numero: number) => {
     if (!staffRole) return;
@@ -253,26 +278,48 @@ const StaffDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold">{titol}</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Panell de control</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold">{titol}</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Panell de control</p>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button variant="outline" size="sm" asChild className="h-8 sm:h-9">
+                <Link to="/pantalla">
+                  <Monitor className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Pantalla</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 sm:h-9">
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sortir</span>
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Button variant="outline" size="sm" asChild className="h-8 sm:h-9">
-              <Link to="/pantalla">
-                <Monitor className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Pantalla</span>
-              </Link>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 sm:h-9">
-              <LogOut className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sortir</span>
+          
+          {/* Camp per al nom del professional */}
+          <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-2">
+            <User className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="El teu nom (es mostrarà a la pantalla)"
+              value={nomProfessional}
+              onChange={(e) => setNomProfessional(e.target.value)}
+              className="h-8 text-sm flex-1"
+            />
+            <Button 
+              size="sm" 
+              onClick={handleSaveNom} 
+              disabled={actualitzarNomProfessional.isPending}
+              className="h-8 shrink-0"
+            >
+              <Save className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Desar</span>
             </Button>
           </div>
         </div>

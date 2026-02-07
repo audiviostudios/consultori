@@ -77,7 +77,8 @@ const NumeroDisplay = ({
   textColor,
   seguentNumero,
   cites,
-  maxTorns
+  maxTorns,
+  nomProfessional
 }: { 
   numero: number; 
   tipus: string;
@@ -87,8 +88,13 @@ const NumeroDisplay = ({
   seguentNumero: number | null;
   cites: Cita[];
   maxTorns: number;
+  nomProfessional: string | null;
 }) => {
   const tipusCita = tipus.toLowerCase() as 'metge' | 'infermera';
+  
+  // Trobar el cognom del pacient actual
+  const citaActual = cites.find(c => c.tipus === tipusCita && c.numero_tanda === numero);
+  const cognomActual = citaActual ? getCognom(citaActual.nom_complet) : null;
   
   return (
     <motion.div
@@ -101,13 +107,19 @@ const NumeroDisplay = ({
           <Icon className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 ${textColor}`} />
         </div>
         
-        <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 sm:mb-4`}>
+        <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold text-foreground`}>
           {tipus.toUpperCase()}
         </h1>
+        
+        {nomProfessional && (
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Avui visita <span className="font-medium text-foreground">{nomProfessional}</span>
+          </p>
+        )}
       </div>
       
       {/* Número gran */}
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center mt-2 sm:mt-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={numero}
@@ -121,9 +133,15 @@ const NumeroDisplay = ({
           </motion.div>
         </AnimatePresence>
         
-        <p className="text-base sm:text-lg text-muted-foreground mt-1">
-          Número actual
-        </p>
+        {cognomActual ? (
+          <p className={`text-lg sm:text-xl md:text-2xl font-semibold ${textColor} mt-1`}>
+            {cognomActual}
+          </p>
+        ) : (
+          <p className="text-base sm:text-lg text-muted-foreground mt-1">
+            —
+          </p>
+        )}
 
         {seguentNumero && (
           <motion.div
@@ -158,8 +176,13 @@ const Pantalla = () => {
   const { data: cites = [] } = useCitesDia(diaActual?.id);
   const isMobile = useIsMobile();
   
-  const numeroMetge = numerosActuals.find(n => n.tipus === 'metge')?.numero || 0;
-  const numeroInfermera = numerosActuals.find(n => n.tipus === 'infermera')?.numero || 0;
+  const metgeData = numerosActuals.find(n => n.tipus === 'metge');
+  const infermeraData = numerosActuals.find(n => n.tipus === 'infermera');
+  
+  const numeroMetge = metgeData?.numero || 0;
+  const numeroInfermera = infermeraData?.numero || 0;
+  const nomMetge = metgeData?.nom_professional || null;
+  const nomInfermera = infermeraData?.nom_professional || null;
 
   // So quan canvia el número
   useNumeroChangeSound(numeroMetge, numeroInfermera);
@@ -199,6 +222,7 @@ const Pantalla = () => {
             seguentNumero={seguentMetge}
             cites={cites}
             maxTorns={diaActual?.max_tandes_metge || 10}
+            nomProfessional={nomMetge}
           />
         </div>
 
@@ -213,6 +237,7 @@ const Pantalla = () => {
             seguentNumero={seguentInfermera}
             cites={cites}
             maxTorns={diaActual?.max_tandes_infermera || 10}
+            nomProfessional={nomInfermera}
           />
         </div>
       </div>

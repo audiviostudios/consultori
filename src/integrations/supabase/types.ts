@@ -188,6 +188,7 @@ export type Database = {
         Row: {
           dia_visita_id: string | null
           id: string
+          nom_professional: string | null
           numero: number
           tipus: string
           updated_at: string
@@ -195,6 +196,7 @@ export type Database = {
         Insert: {
           dia_visita_id?: string | null
           id?: string
+          nom_professional?: string | null
           numero?: number
           tipus: string
           updated_at?: string
@@ -202,6 +204,7 @@ export type Database = {
         Update: {
           dia_visita_id?: string | null
           id?: string
+          nom_professional?: string | null
           numero?: number
           tipus?: string
           updated_at?: string

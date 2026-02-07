@@ -62,3 +62,24 @@ export function useActualitzarNumero() {
     },
   });
 }
+
+export function useActualitzarNomProfessional() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tipus, nom_professional }: { tipus: 'metge' | 'infermera'; nom_professional: string }) => {
+      const { data, error } = await supabase
+        .from('numero_actual')
+        .update({ nom_professional })
+        .eq('tipus', tipus)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['numero-actual'] });
+    },
+  });
+}
