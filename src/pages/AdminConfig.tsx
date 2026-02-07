@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { ArrowLeft, Plus, Trash2, Calendar, Stethoscope, Heart, Syringe, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, Heart, Syringe, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita } from '@/hooks/useDiesVisita';
 import { useCleanupData } from '@/hooks/useCleanupData';
 import { DiaVisita } from '@/lib/types';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DiaVisitaCardProps {
   dia: DiaVisita;
@@ -141,7 +142,10 @@ const AdminConfig = () => {
   const eliminarDia = useEliminarDiaVisita();
   const cleanupData = useCleanupData();
   
-  const [novaData, setNovaData] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  
+  // Dates que ja tenen visita configurada
+  const diesExistents = diesVisita.map(d => new Date(d.data));
 
   const handleCleanup = async () => {
     if (!confirm('Estàs segur? S\'eliminaran totes les cites i dies de visita anteriors a avui, i les consultes ateses de més de 24h.')) return;
@@ -160,29 +164,50 @@ const AdminConfig = () => {
     }
   }, [user, loading, navigate]);
 
-  const handleCrearDia = async () => {
-    const existeix = diesVisita.some(d => d.data === novaData);
-    if (existeix) {
-      toast.error('Ja existeix un dia de visita per aquesta data');
+  const handleCrearDies = async () => {
+    if (selectedDates.length === 0) {
+      toast.error('Selecciona almenys un dia');
       return;
     }
 
-    try {
-      await crearDia.mutateAsync({
-        data: novaData,
-        metge_actiu: true,
-        infermera_activa: true,
-        max_tandes_metge: 10,
-        max_tandes_infermera: 10,
-        vacunes_grip_actiu: false,
-        max_tandes_grip: 10,
-        vacunes_covid_actiu: false,
-        max_tandes_covid: 10,
-      });
-      toast.success('Dia de visita creat');
-    } catch (error) {
-      toast.error('Error al crear el dia');
+    let creats = 0;
+    let errors = 0;
+
+    for (const date of selectedDates) {
+      const dataStr = format(date, 'yyyy-MM-dd');
+      const existeix = diesVisita.some(d => d.data === dataStr);
+      
+      if (existeix) {
+        errors++;
+        continue;
+      }
+
+      try {
+        await crearDia.mutateAsync({
+          data: dataStr,
+          metge_actiu: true,
+          infermera_activa: true,
+          max_tandes_metge: 10,
+          max_tandes_infermera: 10,
+          vacunes_grip_actiu: false,
+          max_tandes_grip: 10,
+          vacunes_covid_actiu: false,
+          max_tandes_covid: 10,
+        });
+        creats++;
+      } catch (error) {
+        errors++;
+      }
     }
+
+    if (creats > 0) {
+      toast.success(`${creats} dia${creats > 1 ? 's' : ''} de visita creat${creats > 1 ? 's' : ''}`);
+    }
+    if (errors > 0) {
+      toast.error(`${errors} dia${errors > 1 ? 's' : ''} no s'han pogut crear (ja existien o error)`);
+    }
+    
+    setSelectedDates([]);
   };
 
   const handleUpdateDia = async (id: string, updates: Partial<DiaVisita>) => {
@@ -237,32 +262,58 @@ const AdminConfig = () => {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* Afegir nou dia */}
+          {/* Afegir nous dies */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5" />
-                Afegir dia de visita
+                Afegir dies de visita
               </CardTitle>
               <CardDescription>
-                Crea un nou dia amb visites del metge i/o infermera
+                Selecciona un o més dies al calendari i prem "Afegir"
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-end">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="data">Data</Label>
-                  <Input
-                    id="data"
-                    type="date"
-                    value={novaData}
-                    onChange={(e) => setNovaData(e.target.value)}
-                    min={format(new Date(), 'yyyy-MM-dd')}
-                  />
+            <CardContent className="space-y-4">
+              <div className="flex justify-center">
+                <Calendar
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={(dates) => setSelectedDates(dates || [])}
+                  locale={ca}
+                  disabled={(date) => {
+                    // Deshabilitar dies passats
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (date < today) return true;
+                    // Deshabilitar dies que ja existeixen
+                    return diesExistents.some(d => 
+                      d.toDateString() === date.toDateString()
+                    );
+                  }}
+                  modifiers={{
+                    existing: diesExistents
+                  }}
+                  modifiersClassNames={{
+                    existing: 'bg-primary/20 text-primary font-bold'
+                  }}
+                  className={cn("p-3 pointer-events-auto rounded-md border")}
+                />
+              </div>
+              
+              {selectedDates.length > 0 && (
+                <div className="text-center text-sm text-muted-foreground">
+                  {selectedDates.length} dia{selectedDates.length > 1 ? 's' : ''} seleccionat{selectedDates.length > 1 ? 's' : ''}
                 </div>
-                <Button onClick={handleCrearDia} disabled={crearDia.isPending}>
+              )}
+              
+              <div className="flex justify-center">
+                <Button 
+                  onClick={handleCrearDies} 
+                  disabled={crearDia.isPending || selectedDates.length === 0}
+                  size="lg"
+                >
                   <Plus className="w-4 h-4 mr-2" />
-                  Afegir
+                  Afegir {selectedDates.length > 0 ? `${selectedDates.length} dia${selectedDates.length > 1 ? 's' : ''}` : 'dies'}
                 </Button>
               </div>
             </CardContent>
