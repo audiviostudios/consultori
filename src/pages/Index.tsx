@@ -8,8 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { TandaSelector } from '@/components/TandaSelector';
 import { ConsultaForm } from '@/components/ConsultaForm';
+import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
+import { CancelBookingSection } from '@/components/CancelBookingSection';
 import { VoiceBookingAssistant } from '@/components/VoiceBookingAssistant';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { DiaVisita } from '@/lib/types';
 
 function DiaVisitaCard({ dia, isSelected, onSelect }: { dia: DiaVisita; isSelected: boolean; onSelect: () => void }) {
@@ -46,6 +49,7 @@ function DiaVisitaCard({ dia, isSelected, onSelect }: { dia: DiaVisita; isSelect
 const Index = () => {
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
+  const isMobile = useIsMobile();
   
   const selectedDia = diesVisita[selectedDiaIndex];
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
@@ -277,6 +281,15 @@ const Index = () => {
                     </motion.div>
                   )}
 
+                  {/* Secció de cancel·lació */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <CancelBookingSection />
+                  </motion.div>
+
                   {/* Missatge si no hi ha serveis actius */}
                   {!selectedDia.metge_actiu && !selectedDia.infermera_activa && !selectedDia.vacunes_grip_actiu && !selectedDia.vacunes_covid_actiu && (
                     <Card className="text-center py-8">
@@ -293,10 +306,15 @@ const Index = () => {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="grid gap-6 md:grid-cols-2"
                   >
-                    <ConsultaForm tipus="metge" />
-                    <ConsultaForm tipus="infermera" />
+                    {isMobile ? (
+                      <MobileConsultaSelector />
+                    ) : (
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <ConsultaForm tipus="metge" />
+                        <ConsultaForm tipus="infermera" />
+                      </div>
+                    )}
                   </motion.div>
                 </TabsContent>
               </Tabs>
