@@ -10,7 +10,7 @@ import { TandaSelector } from '@/components/TandaSelector';
 import { ConsultaForm } from '@/components/ConsultaForm';
 import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
 import { CancelBookingSection } from '@/components/CancelBookingSection';
-import { VoiceBookingAssistant } from '@/components/VoiceBookingAssistant';
+
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DiaVisita } from '@/lib/types';
@@ -330,8 +330,6 @@ const Index = () => {
         </div>
       </footer>
 
-      {/* Assistent de veu amb IA */}
-      <VoiceBookingAssistant />
     </div>
   );
 };
