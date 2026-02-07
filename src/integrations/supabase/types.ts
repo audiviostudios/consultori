@@ -216,6 +216,39 @@ export type Database = {
           },
         ]
       }
+      receptes: {
+        Row: {
+          atesa: boolean
+          created_at: string
+          email: string | null
+          id: string
+          medicament: string
+          nom_complet: string
+          notes: string | null
+          telefon: string
+        }
+        Insert: {
+          atesa?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          medicament: string
+          nom_complet: string
+          notes?: string | null
+          telefon: string
+        }
+        Update: {
+          atesa?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          medicament?: string
+          nom_complet?: string
+          notes?: string | null
+          telefon?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

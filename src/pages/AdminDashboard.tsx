@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
 import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
-import { Cita, ConsultaTelefonica, DiaVisita } from '@/lib/types';
+import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
+import { Cita, ConsultaTelefonica, DiaVisita, Recepta } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -85,6 +86,42 @@ function ConsultaCard({ consulta, onToggle }: ConsultaCardProps) {
   );
 }
 
+interface ReceptaCardProps {
+  recepta: Recepta;
+  onToggle: () => void;
+}
+
+function ReceptaCard({ recepta, onToggle }: ReceptaCardProps) {
+  return (
+    <Card className={recepta.atesa ? 'opacity-50' : ''}>
+      <CardContent className="pt-4">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <p className="font-medium">{recepta.nom_complet}</p>
+            <p className="text-sm text-muted-foreground">{recepta.telefon}</p>
+          </div>
+          <Badge variant="outline" className="bg-primary/10">
+            <Pill className="w-3 h-3 mr-1" />
+            Recepta
+          </Badge>
+        </div>
+        <p className="text-sm font-medium text-primary mb-1">{recepta.medicament}</p>
+        {recepta.notes && (
+          <p className="text-sm text-muted-foreground mb-3">{recepta.notes}</p>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {format(new Date(recepta.created_at), "dd/MM/yyyy HH:mm", { locale: ca })}
+          </span>
+          <Button size="sm" variant={recepta.atesa ? 'outline' : 'default'} onClick={onToggle}>
+            {recepta.atesa ? 'Reobrir' : 'Marcar atesa'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 interface DashboardSectionProps {
   tipus: 'metge' | 'infermera';
   icon: typeof Stethoscope;
@@ -95,12 +132,15 @@ interface DashboardSectionProps {
 
 function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: DashboardSectionProps) {
   const { data: consultes = [] } = useConsultesTelefoniques(tipus);
+  const { data: receptes = [] } = useReceptes();
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
   const marcarAtesa = useMarcarConsultaAtesa();
+  const marcarReceptaAtesa = useMarcarReceptaAtesa();
 
   const citesFiltered = cites.filter(c => c.tipus === tipus);
   const numeroActual = numerosActuals.find(n => n.tipus === tipus)?.numero || 0;
+  const receptesPendents = receptes.filter(r => !r.atesa);
 
   const handleSelectCita = async (numero: number) => {
     try {
@@ -118,6 +158,14 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
   const handleToggleConsulta = async (id: string, atesa: boolean) => {
     try {
       await marcarAtesa.mutateAsync({ id, atesa: !atesa });
+    } catch (error) {
+      toast.error('Error al actualitzar');
+    }
+  };
+
+  const handleToggleRecepta = async (id: string, atesa: boolean) => {
+    try {
+      await marcarReceptaAtesa.mutateAsync({ id, atesa: !atesa });
     } catch (error) {
       toast.error('Error al actualitzar');
     }
@@ -147,6 +195,12 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
             <Phone className="w-4 h-4" />
             Consultes ({consultes.filter(c => !c.atesa).length})
           </TabsTrigger>
+          {tipus === 'metge' && (
+            <TabsTrigger value="receptes" className="flex items-center gap-2">
+              <Pill className="w-4 h-4" />
+              Receptes ({receptesPendents.length})
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="cites">
@@ -191,6 +245,28 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
             </div>
           )}
         </TabsContent>
+
+        {tipus === 'metge' && (
+          <TabsContent value="receptes">
+            {receptes.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No hi ha sol·licituds de receptes
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {receptes.map((recepta) => (
+                  <ReceptaCard
+                    key={recepta.id}
+                    recepta={recepta}
+                    onToggle={() => handleToggleRecepta(recepta.id, recepta.atesa)}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

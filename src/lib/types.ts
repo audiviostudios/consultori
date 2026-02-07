@@ -37,6 +37,17 @@ export interface ConsultaTelefonica {
   created_at: string;
 }
 
+export interface Recepta {
+  id: string;
+  nom_complet: string;
+  telefon: string;
+  email?: string | null;
+  medicament: string;
+  notes?: string | null;
+  atesa: boolean;
+  created_at: string;
+}
+
 export interface NumeroActual {
   id: string;
   tipus: 'metge' | 'infermera';
