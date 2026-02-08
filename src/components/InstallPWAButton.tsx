@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 
 export function InstallPWAButton() {
-  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
 
   // If already installed, don't show anything
   if (isInstalled) return null;
@@ -32,7 +32,11 @@ export function InstallPWAButton() {
     );
   }
 
-  // For iOS and other browsers, show instructions
+  // For iOS only, show manual instructions
+  if (!isIOS) {
+    return null;
+  }
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -62,14 +66,6 @@ export function InstallPWAButton() {
             <ol className="text-sm text-muted-foreground space-y-2 ml-4">
               <li>1. Toca el botó <strong>Compartir</strong> (icona de quadrat amb fletxa)</li>
               <li>2. Desplaça't i toca <strong>"Afegir a la pantalla d'inici"</strong></li>
-              <li>3. Toca <strong>"Afegir"</strong></li>
-            </ol>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-medium text-sm">🤖 Android (Chrome):</h4>
-            <ol className="text-sm text-muted-foreground space-y-2 ml-4">
-              <li>1. Toca el menú <strong>⋮</strong> (tres punts)</li>
-              <li>2. Toca <strong>"Afegir a la pantalla d'inici"</strong></li>
               <li>3. Toca <strong>"Afegir"</strong></li>
             </ol>
           </div>

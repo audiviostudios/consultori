@@ -9,10 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+type CitaCancelable = {
+  id: string;
+  tipus: string;
+  numero_tanda: number;
+  nom_complet: string;
+  dies_visita?: {
+    data?: string;
+  } | null;
+};
+
 export function CancelBookingSection() {
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [foundCita, setFoundCita] = useState<any>(null);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [foundCita, setFoundCita] = useState<CitaCancelable | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
 
@@ -37,7 +48,8 @@ export function CancelBookingSection() {
         return;
       }
 
-      setFoundCita(data);
+      setFoundCita(data as CitaCancelable);
+      setShowPinDialog(false);
       setShowConfirmDialog(true);
     } catch (error) {
       toast.error('Error al buscar la cita');
@@ -83,41 +95,57 @@ export function CancelBookingSection() {
 
   return (
     <>
-      <Card className="border-destructive/30 bg-destructive/5">
+      <Card className="h-full border-destructive/30 bg-destructive/5">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <X className="w-4 h-4 text-destructive" />
-            Cancel·lar cita
+            Anul·lar cita
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Si no pots venir, introdueix el PIN que vas rebre per alliberar la teva tanda.
-          </p>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label htmlFor="cancel-pin" className="sr-only">PIN de cancel·lació</Label>
-              <Input
-                id="cancel-pin"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="Introdueix el PIN de 6 dígits"
-                className="text-center tracking-widest font-mono"
-              />
-            </div>
-            <Button 
-              onClick={handleSearch} 
-              disabled={isLoading || pin.length !== 6}
-              variant="destructive"
-            >
-              <KeyRound className="w-4 h-4" />
-            </Button>
-          </div>
+        <CardContent>
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full h-11 gap-2"
+            onClick={() => setShowPinDialog(true)}
+          >
+            <KeyRound className="w-4 h-4" />
+            Introduir PIN
+          </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Anul·lar cita</DialogTitle>
+            <DialogDescription>
+              Introdueix el PIN de cancel·lació per buscar la teva cita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="cancel-pin">PIN de cancel·lació</Label>
+            <Input
+              id="cancel-pin"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="Introdueix el PIN de 6 dígits"
+              className="text-center tracking-widest font-mono"
+            />
+            <Button
+              onClick={handleSearch}
+              disabled={isLoading || pin.length !== 6}
+              variant="destructive"
+              className="w-full"
+            >
+              {isLoading ? 'Buscant...' : 'Buscar cita'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>

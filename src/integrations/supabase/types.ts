@@ -146,6 +146,8 @@ export type Database = {
         Row: {
           created_at: string
           data: string
+          hora_inici_infermera: string
+          hora_inici_metge: string
           id: string
           infermera_activa: boolean
           max_tandes_covid: number
@@ -160,6 +162,8 @@ export type Database = {
         Insert: {
           created_at?: string
           data: string
+          hora_inici_infermera?: string
+          hora_inici_metge?: string
           id?: string
           infermera_activa?: boolean
           max_tandes_covid?: number
@@ -174,6 +178,8 @@ export type Database = {
         Update: {
           created_at?: string
           data?: string
+          hora_inici_infermera?: string
+          hora_inici_metge?: string
           id?: string
           infermera_activa?: boolean
           max_tandes_covid?: number
@@ -189,29 +195,38 @@ export type Database = {
       }
       numero_actual: {
         Row: {
+          consultes_pendents: number
           dia_visita_id: string | null
+          emergencia_activa: boolean
           estat_visita: string | null
           id: string
           nom_professional: string | null
           numero: number
+          receptes_pendents: number
           tipus: string
           updated_at: string
         }
         Insert: {
+          consultes_pendents?: number
           dia_visita_id?: string | null
+          emergencia_activa?: boolean
           estat_visita?: string | null
           id?: string
           nom_professional?: string | null
           numero?: number
+          receptes_pendents?: number
           tipus: string
           updated_at?: string
         }
         Update: {
+          consultes_pendents?: number
           dia_visita_id?: string | null
+          emergencia_activa?: boolean
           estat_visita?: string | null
           id?: string
           nom_professional?: string | null
           numero?: number
+          receptes_pendents?: number
           tipus?: string
           updated_at?: string
         }

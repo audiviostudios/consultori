@@ -85,12 +85,13 @@ const AdminSetup = () => {
           toast.info('Comprova el teu correu per verificar el compte');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al crear administrador';
       console.error('Error:', error);
-      if (error.message.includes('already registered')) {
+      if (message.includes('already registered')) {
         setError('Aquest correu ja està registrat');
       } else {
-        setError(error.message || 'Error al crear administrador');
+        setError(message);
       }
     } finally {
       setLoading(false);

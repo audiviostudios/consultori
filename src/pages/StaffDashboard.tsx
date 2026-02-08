@@ -3,21 +3,24 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, X, UserPlus } from 'lucide-react';
+import { LogOut, Stethoscope, HandHeart, Calendar, Monitor, ChevronLeft, ChevronRight, Pill, Phone, CheckCircle, User, Save, X, Syringe, AlertTriangle, Trash2 } from 'lucide-react';
 import { AddCitaDialog } from '@/components/AddCitaDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { useDiesVisita, useCitesDia, useActualitzarEstatCita } from '@/hooks/useDiesVisita';
-import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, useActualitzarEstatVisita } from '@/hooks/useNumeroActual';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDiesVisita, useCitesDia, useActualitzarEstatCita, useEliminarCita } from '@/hooks/useDiesVisita';
+import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, useToggleEmergencia } from '@/hooks/useNumeroActual';
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
-import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
-import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
+import { useReceptes, useMarcarReceptaAtesa, useCrearRecepta } from '@/hooks/useReceptes';
+import { useConsultesTelefoniques, useMarcarConsultaAtesa, useCrearConsulta } from '@/hooks/useConsultes';
 import { Cita, DiaVisita, Recepta, ConsultaTelefonica } from '@/lib/types';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CitaCardProps {
   cita: Cita;
@@ -25,9 +28,26 @@ interface CitaCardProps {
   onSelect: () => void;
   onAssistit: () => void;
   onNoAssistit: () => void;
+  onDelete: () => void;
 }
 
-function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit }: CitaCardProps) {
+function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete }: CitaCardProps) {
+  const getTipusInfo = (tipus: Cita['tipus']) => {
+    switch (tipus) {
+      case 'grip':
+        return { label: 'Grip', icon: Syringe };
+      case 'covid':
+        return { label: 'COVID', icon: Syringe };
+      case 'infermera':
+        return { label: 'Infermera', icon: HandHeart };
+      default:
+        return { label: 'Metge', icon: Stethoscope };
+    }
+  };
+
+  const tipusInfo = getTipusInfo(cita.tipus);
+  const TipusIcon = tipusInfo.icon;
+
   const handleAssistit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAssistit();
@@ -36,6 +56,11 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit }: CitaCa
   const handleNoAssistit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onNoAssistit();
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete();
   };
 
   return (
@@ -53,8 +78,19 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit }: CitaCa
     >
       <div className="flex items-center justify-between mb-1 sm:mb-2">
         <span className="text-2xl sm:text-3xl font-bold text-primary">{cita.numero_tanda}</span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="gap-1">
+            <TipusIcon className="w-3 h-3" />
+            {tipusInfo.label}
+          </Badge>
           {isActive && <Badge className="text-xs">Visitant</Badge>}
+          <button
+            onClick={handleDelete}
+            className="w-6 h-6 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
+            title="Esborrar visita"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </button>
           {isActive && (
             <>
               <button
@@ -78,6 +114,219 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit }: CitaCa
       <p className="font-medium text-foreground text-sm sm:text-base truncate">{cita.nom_complet}</p>
       <p className="text-xs sm:text-sm text-muted-foreground">{cita.telefon}</p>
     </motion.div>
+  );
+}
+
+function AddConsultaDialog({ defaultTipus }: { defaultTipus: 'metge' | 'infermera' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [tipus, setTipus] = useState<'metge' | 'infermera'>(defaultTipus);
+  const [nomComplet, setNomComplet] = useState('');
+  const [telefon, setTelefon] = useState('');
+  const [email, setEmail] = useState('');
+  const [motiu, setMotiu] = useState('');
+  const [urgencia, setUrgencia] = useState<'baixa' | 'mitjana' | 'alta'>('mitjana');
+
+  const crearConsulta = useCrearConsulta();
+
+  const resetForm = () => {
+    setTipus(defaultTipus);
+    setNomComplet('');
+    setTelefon('');
+    setEmail('');
+    setMotiu('');
+    setUrgencia('mitjana');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!nomComplet.trim() || !motiu.trim()) {
+      toast.error('Omple el nom i el motiu');
+      return;
+    }
+
+    if (!/^[0-9]{9}$/.test(telefon.trim())) {
+      toast.error('El telèfon ha de tenir 9 dígits');
+      return;
+    }
+
+    try {
+      await crearConsulta.mutateAsync({
+        tipus,
+        nom_complet: nomComplet.trim(),
+        telefon: telefon.trim(),
+        email: email.trim() || null,
+        motiu: motiu.trim(),
+        urgencia,
+      });
+      toast.success('Consulta creada correctament');
+      setIsOpen(false);
+      resetForm();
+    } catch {
+      toast.error('Error al crear la consulta');
+    }
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) resetForm();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1">
+          <Phone className="w-4 h-4" />
+          <span className="hidden sm:inline">Nova consulta</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Crear consulta telefònica</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-2">
+            <Label>Professional</Label>
+            <Select value={tipus} onValueChange={(v) => setTipus(v as 'metge' | 'infermera')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="metge">Metge</SelectItem>
+                <SelectItem value="infermera">Infermera</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Nom i cognoms</Label>
+            <Input value={nomComplet} onChange={(e) => setNomComplet(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Telèfon</Label>
+            <Input value={telefon} onChange={(e) => setTelefon(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Correu (opcional)</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Urgència</Label>
+            <Select value={urgencia} onValueChange={(v) => setUrgencia(v as 'baixa' | 'mitjana' | 'alta')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="mitjana">Mitjana</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Motiu</Label>
+            <Textarea value={motiu} onChange={(e) => setMotiu(e.target.value)} rows={3} required />
+          </div>
+          <Button type="submit" className="w-full" disabled={crearConsulta.isPending}>
+            {crearConsulta.isPending ? 'Creant...' : 'Crear consulta'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddReceptaDialog() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [nomComplet, setNomComplet] = useState('');
+  const [telefon, setTelefon] = useState('');
+  const [email, setEmail] = useState('');
+  const [medicament, setMedicament] = useState('');
+  const [notes, setNotes] = useState('');
+  const crearRecepta = useCrearRecepta();
+
+  const resetForm = () => {
+    setNomComplet('');
+    setTelefon('');
+    setEmail('');
+    setMedicament('');
+    setNotes('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!nomComplet.trim() || !medicament.trim()) {
+      toast.error('Omple el nom i el medicament');
+      return;
+    }
+
+    if (!/^[0-9]{9}$/.test(telefon.trim())) {
+      toast.error('El telèfon ha de tenir 9 dígits');
+      return;
+    }
+
+    try {
+      await crearRecepta.mutateAsync({
+        nom_complet: nomComplet.trim(),
+        telefon: telefon.trim(),
+        email: email.trim() || null,
+        medicament: medicament.trim(),
+        notes: notes.trim() || null,
+      });
+      toast.success('Recepta creada correctament');
+      setIsOpen(false);
+      resetForm();
+    } catch {
+      toast.error('Error al crear la recepta');
+    }
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) resetForm();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1">
+          <Pill className="w-4 h-4" />
+          <span className="hidden sm:inline">Nova recepta</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Crear sol·licitud de recepta</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-2">
+            <Label>Nom i cognoms</Label>
+            <Input value={nomComplet} onChange={(e) => setNomComplet(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Telèfon</Label>
+            <Input value={telefon} onChange={(e) => setTelefon(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Correu (opcional)</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Medicament</Label>
+            <Input value={medicament} onChange={(e) => setMedicament(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Notes (opcional)</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </div>
+          <Button type="submit" className="w-full" disabled={crearRecepta.isPending}>
+            {crearRecepta.isPending ? 'Creant...' : 'Crear recepta'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -200,7 +449,6 @@ function DiaSelector({ dies, selectedIndex, onSelect }: { dies: DiaVisita[]; sel
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
   
@@ -211,12 +459,15 @@ const StaffDashboard = () => {
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
+  const eliminarCita = useEliminarCita();
   const actualitzarNomProfessional = useActualitzarNomProfessional();
-  const actualitzarEstatVisita = useActualitzarEstatVisita();
+  const toggleEmergencia = useToggleEmergencia();
   const actualitzarEstatCita = useActualitzarEstatCita();
+  const [activeCitaId, setActiveCitaId] = useState<string | null>(null);
 
   const numeroActualData = numerosActuals.find(n => n.tipus === staffRole);
   const [nomProfessional, setNomProfessional] = useState('');
+  const emergenciaActiva = numeroActualData?.emergencia_activa || false;
 
   // Dades de receptes i consultes
   const { data: receptes = [] } = useReceptes();
@@ -262,16 +513,48 @@ const StaffDashboard = () => {
     }
   };
 
-  const citesFiltered = cites.filter(c => c.tipus === staffRole);
-  const numeroActual = numeroActualData?.numero || 0;
-  const estatVisita = numeroActualData?.estat_visita;
+  const handleToggleEmergencia = async () => {
+    if (!staffRole) return;
+    try {
+      await toggleEmergencia.mutateAsync({
+        tipus: staffRole,
+        emergencia_activa: !emergenciaActiva,
+      });
+      toast.success(!emergenciaActiva ? 'Emergència activada' : 'Emergència desactivada');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('emergencia_activa') || message.includes('column')) {
+        toast.error('Cal aplicar la migració de base de dades per activar emergències');
+      } else {
+        toast.error('No s\'ha pogut actualitzar l\'estat d\'emergència');
+      }
+    }
+  };
 
-  const handleSelectCita = async (numero: number) => {
+  const citesTipus = staffRole === 'infermera' ? ['infermera', 'grip', 'covid'] : ['metge'];
+  const citesFiltered = cites.filter(c => citesTipus.includes(c.tipus));
+  const numeroActual = numeroActualData?.numero || 0;
+
+  useEffect(() => {
+    if (!citesFiltered.length || numeroActual === 0) {
+      setActiveCitaId(null);
+      return;
+    }
+
+    if (activeCitaId && citesFiltered.some(c => c.id === activeCitaId && c.numero_tanda === numeroActual)) {
+      return;
+    }
+
+    const byNumber = citesFiltered.find(c => c.numero_tanda === numeroActual);
+    setActiveCitaId(byNumber?.id || null);
+  }, [citesFiltered, numeroActual, activeCitaId]);
+
+  const handleSelectCita = async (cita: Cita) => {
     if (!staffRole) return;
     try {
       // Si hi havia un pacient anterior i no s'ha marcat com no_assistit, marcar-lo com visitat
-      if (numeroActual > 0 && numeroActual !== numero) {
-        const citaAnterior = citesFiltered.find(c => c.numero_tanda === numeroActual);
+      if (numeroActual > 0 && numeroActual !== cita.numero_tanda && activeCitaId) {
+        const citaAnterior = citesFiltered.find(c => c.id === activeCitaId);
         if (citaAnterior && citaAnterior.estat_assistencia !== 'no_assistit') {
           await actualitzarEstatCita.mutateAsync({ id: citaAnterior.id, estat_assistencia: 'visitat' });
         }
@@ -280,10 +563,11 @@ const StaffDashboard = () => {
       // Canviar al nou pacient
       await actualitzarNumero.mutateAsync({ 
         tipus: staffRole, 
-        numero, 
+        numero: cita.numero_tanda,
         dia_visita_id: selectedDia?.id 
       });
-      toast.success(`Visitant pacient ${numero}`);
+      setActiveCitaId(cita.id);
+      toast.success(`Visitant pacient ${cita.numero_tanda}`);
     } catch (error) {
       toast.error('Error al actualitzar');
     }
@@ -292,7 +576,7 @@ const StaffDashboard = () => {
   const handleAssistit = async () => {
     if (!staffRole) return;
     try {
-      const citaActual = citesFiltered.find(c => c.numero_tanda === numeroActual);
+      const citaActual = activeCitaId ? citesFiltered.find(c => c.id === activeCitaId) : null;
       if (citaActual) {
         await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'visitat' });
         toast.success('Pacient marcat com a assistit');
@@ -305,7 +589,7 @@ const StaffDashboard = () => {
   const handleNoAssistit = async () => {
     if (!staffRole) return;
     try {
-      const citaActual = citesFiltered.find(c => c.numero_tanda === numeroActual);
+      const citaActual = activeCitaId ? citesFiltered.find(c => c.id === activeCitaId) : null;
       if (citaActual) {
         await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'no_assistit' });
         toast.info('Pacient marcat com no assistit');
@@ -333,6 +617,21 @@ const StaffDashboard = () => {
     }
   };
 
+  const handleEliminarVisita = async (cita: Cita) => {
+    const confirmacio = confirm(`Vols esborrar la visita ${cita.numero_tanda} de ${cita.nom_complet}?`);
+    if (!confirmacio) return;
+
+    try {
+      await eliminarCita.mutateAsync({ id: cita.id });
+      if (activeCitaId === cita.id) {
+        setActiveCitaId(null);
+      }
+      toast.success('Visita esborrada');
+    } catch {
+      toast.error("No s'ha pogut esborrar la visita");
+    }
+  };
+
   if (!isAuthenticated || !staffRole) return null;
 
   if (loadingDies) {
@@ -343,7 +642,7 @@ const StaffDashboard = () => {
     );
   }
 
-  const Icon = staffRole === 'metge' ? Stethoscope : Heart;
+  const Icon = staffRole === 'metge' ? Stethoscope : HandHeart;
   const titol = staffRole === 'metge' ? 'Metge' : 'Infermera';
 
   return (
@@ -391,6 +690,18 @@ const StaffDashboard = () => {
             >
               <Save className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Desar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant={emergenciaActiva ? 'destructive' : 'outline'}
+              onClick={handleToggleEmergencia}
+              disabled={toggleEmergencia.isPending}
+              className="h-8 shrink-0 gap-1"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {emergenciaActiva ? 'Emergència ON' : 'Emergència OFF'}
+              </span>
             </Button>
           </div>
         </div>
@@ -456,7 +767,7 @@ const StaffDashboard = () => {
               <TabsContent value="cites">
                 <Card>
                   <CardHeader className="pb-2 sm:pb-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                         <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         <span className="truncate">
@@ -481,15 +792,21 @@ const StaffDashboard = () => {
                     ) : (
                       <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {citesFiltered
-                          .sort((a, b) => a.numero_tanda - b.numero_tanda)
+                          .sort((a, b) => {
+                            if (a.numero_tanda !== b.numero_tanda) {
+                              return a.numero_tanda - b.numero_tanda;
+                            }
+                            return a.tipus.localeCompare(b.tipus);
+                          })
                           .map((cita) => (
                             <CitaCard
                               key={cita.id}
                               cita={cita}
-                              isActive={cita.numero_tanda === numeroActual}
-                              onSelect={() => handleSelectCita(cita.numero_tanda)}
+                              isActive={activeCitaId === cita.id}
+                              onSelect={() => handleSelectCita(cita)}
                               onAssistit={handleAssistit}
                               onNoAssistit={handleNoAssistit}
+                              onDelete={() => handleEliminarVisita(cita)}
                             />
                           ))}
                       </div>
@@ -501,10 +818,13 @@ const StaffDashboard = () => {
               <TabsContent value="consultes">
                 <Card>
                   <CardHeader className="pb-2 sm:pb-4">
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Consultes telefòniques pendents
-                    </CardTitle>
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                        <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Consultes telefòniques pendents
+                      </CardTitle>
+                      <AddConsultaDialog defaultTipus={staffRole} />
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {consultesPendents.length === 0 ? (
@@ -530,10 +850,13 @@ const StaffDashboard = () => {
                 <TabsContent value="receptes">
                   <Card>
                     <CardHeader className="pb-2 sm:pb-4">
-                      <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                        <Pill className="w-4 h-4 sm:w-5 sm:h-5" />
-                        Sol·licituds de receptes pendents
-                      </CardTitle>
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                          <Pill className="w-4 h-4 sm:w-5 sm:h-5" />
+                          Sol·licituds de receptes pendents
+                        </CardTitle>
+                        <AddReceptaDialog />
+                      </div>
                     </CardHeader>
                     <CardContent>
                       {receptesPendents.length === 0 ? (

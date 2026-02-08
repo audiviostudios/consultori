@@ -118,7 +118,7 @@ export function AddCitaDialog({ diaVisitaId, tipus, diaVisita, citesOcupades }: 
       
       // Enviar recordatori per email només si hi ha correu
       if (formData.email) {
-        supabase.functions.invoke('enviar-recordatori', {
+        const { error: reminderError } = await supabase.functions.invoke('enviar-recordatori', {
           body: {
             email: formData.email,
             nom: formData.nom_complet,
@@ -127,14 +127,20 @@ export function AddCitaDialog({ diaVisitaId, tipus, diaVisita, citesOcupades }: 
             data: diaVisita.data || new Date().toISOString(),
             pin_cancelacio: pin,
           },
-        }).catch(console.error);
+        });
+
+        if (reminderError) {
+          console.error('Error enviant recordatori:', reminderError);
+          toast.warning("Cita creada, però el correu de recordatori no s'ha pogut enviar");
+        }
       }
       
       toast.success(`Cita ${numeroTanda} creada correctament!`);
       setIsOpen(false);
       resetForm();
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error: unknown) {
+      const dbError = error as { code?: string };
+      if (dbError.code === '23505') {
         toast.error('Aquesta tanda ja ha estat reservada');
       } else {
         toast.error('Error al crear la cita');

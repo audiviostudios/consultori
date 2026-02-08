@@ -9,6 +9,8 @@ export interface DiaVisita {
   max_tandes_grip: number;
   vacunes_covid_actiu: boolean;
   max_tandes_covid: number;
+  hora_inici_metge: string;
+  hora_inici_infermera: string;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +58,9 @@ export interface NumeroActual {
   dia_visita_id: string | null;
   nom_professional: string | null;
   estat_visita: 'visitat' | 'no_assistit' | null;
+  emergencia_activa: boolean;
+  consultes_pendents: number;
+  receptes_pendents: number;
   updated_at: string;
 }
 

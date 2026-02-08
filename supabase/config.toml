@@ -1,4 +1,4 @@
-project_id = "lkrcedlhdvqmpbzrfxcu"
+project_id = "cbfutananppmkhzntzxb"
 
 [functions.enviar-recordatori]
 verify_jwt = false

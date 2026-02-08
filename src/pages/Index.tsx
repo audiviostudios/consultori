@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { Calendar, Stethoscope, Heart, Syringe, Phone, ChevronLeft, ChevronRight, Pill } from 'lucide-react';
+import { Calendar, Stethoscope, HandHeart, Syringe, Phone, ChevronLeft, ChevronRight, Pill, Clock3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -43,18 +43,22 @@ function DiaVisitaCard({ dia, isSelected, onSelect }: { dia: DiaVisita; isSelect
       {isAvui && <span className="text-[9px] sm:text-[10px] font-medium text-primary">Avui</span>}
       <div className="flex gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
         {dia.metge_actiu && <Stethoscope className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />}
-        {dia.infermera_activa && <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />}
+        {dia.infermera_activa && <HandHeart className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />}
       </div>
     </motion.button>
   );
 }
 
 const Index = () => {
+  const HORA_INICI_METGE_STANDARD = '08:50';
+  const HORA_INICI_INFERMERA_STANDARD = '09:00';
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
   const isMobile = useIsMobile();
   
   const selectedDia = diesVisita[selectedDiaIndex];
+  const horaIniciMetge = selectedDia?.hora_inici_metge?.slice(0, 5) || HORA_INICI_METGE_STANDARD;
+  const horaIniciInfermera = selectedDia?.hora_inici_infermera?.slice(0, 5) || HORA_INICI_INFERMERA_STANDARD;
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
 
   const avui = format(new Date(), "EEEE, d MMMM yyyy", { locale: ca });
@@ -194,6 +198,15 @@ const Index = () => {
                     </p>
                   </div>
 
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 sm:px-4 sm:py-3">
+                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+                      <Clock3 className="w-4 h-4 text-primary shrink-0" />
+                      <span>
+                        Inici orientatiu: <strong className="text-foreground">Metge {horaIniciMetge}</strong> i <strong className="text-foreground">Infermera {horaIniciInfermera}</strong>. Si tens la tanda 1, sigues puntual a l'hora d'inici.
+                      </span>
+                    </p>
+                  </div>
+
                   <motion.div
                     key={selectedDia.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -208,6 +221,7 @@ const Index = () => {
                             <Stethoscope className="w-5 h-5" />
                             Metge
                           </CardTitle>
+                          <p className="text-xs text-muted-foreground">Hora d'inici orientativa: {horaIniciMetge}</p>
                         </CardHeader>
                         <CardContent>
                           <TandaSelector
@@ -227,9 +241,10 @@ const Index = () => {
                       <Card>
                         <CardHeader className="pb-4">
                           <CardTitle className="flex items-center gap-2 text-primary">
-                            <Heart className="w-5 h-5" />
+                            <HandHeart className="w-5 h-5" />
                             Infermera
                           </CardTitle>
+                          <p className="text-xs text-muted-foreground">Hora d'inici orientativa: {horaIniciInfermera}</p>
                         </CardHeader>
                         <CardContent>
                           <TandaSelector
@@ -297,29 +312,30 @@ const Index = () => {
                     </motion.div>
                   )}
 
-                  {/* Secció de cancel·lació */}
+                  {/* Accions ràpides */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
+                    className="grid gap-4 sm:grid-cols-2 items-stretch"
                   >
                     <CancelBookingSection />
-                  </motion.div>
 
-                  {/* Enllaç a pantalla de números */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <Link to="/pantalla">
-                      <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-primary/10 hover:bg-primary/20 border-2 border-primary/30 rounded-xl cursor-pointer transition-all">
-                        <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-                        <span className="text-sm sm:text-lg font-semibold text-primary text-center">
-                          Veure per quin número estan visitant
-                        </span>
-                      </div>
-                    </Link>
+                    <Card className="h-full border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base text-primary">
+                          <Stethoscope className="w-4 h-4" />
+                          Consultar torn
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Button asChild className="w-full h-11 gap-2">
+                          <Link to="/pantalla">
+                            Veure per quin número estan visitant
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </motion.div>
 
                   {/* Missatge si no hi ha serveis actius */}

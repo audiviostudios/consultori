@@ -1,31 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
-    --background: 0 0% 99%;
-    --foreground: 220 20% 10%;
+    --background: 200 30% 98%;
+    --foreground: 222 25% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 25% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 25% 14%;
 
-    --primary: 199 89% 48%;
+    --primary: 195 86% 43%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 195 35% 93%;
+    --secondary-foreground: 216 28% 20%;
 
-    --muted: 210 15% 95%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 210 24% 95%;
+    --muted-foreground: 218 16% 42%;
 
-    --accent: 199 89% 95%;
-    --accent-foreground: 199 89% 35%;
+    --accent: 193 74% 90%;
+    --accent-foreground: 194 70% 28%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -36,13 +36,17 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 199 89% 48%;
+    --border: 205 24% 88%;
+    --input: 205 24% 90%;
+    --ring: 195 86% 43%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
 
-    --medical-blue: 199 89% 48%;
+    --surface-container-low: 197 35% 97%;
+    --surface-container: 197 30% 95%;
+    --surface-container-high: 196 24% 92%;
+
+    --medical-blue: 195 86% 43%;
     --medical-blue-light: 199 89% 95%;
     --medical-green: 142 76% 36%;
     --medical-green-light: 142 76% 95%;
@@ -50,18 +54,18 @@
     --medical-red-light: 0 72% 95%;
     --medical-orange: 38 92% 50%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 20% 30%;
-    --sidebar-primary: 199 89% 48%;
+    --sidebar-background: 197 26% 96%;
+    --sidebar-foreground: 220 20% 24%;
+    --sidebar-primary: 195 86% 43%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 199 89% 95%;
     --sidebar-accent-foreground: 199 89% 35%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-border: 205 24% 88%;
+    --sidebar-ring: 195 86% 43%;
   }
 
   .dark {
-    --background: 220 20% 6%;
+    --background: 220 20% 8%;
     --foreground: 210 20% 98%;
 
     --card: 220 20% 8%;
@@ -73,14 +77,14 @@
     --primary: 199 89% 55%;
     --primary-foreground: 220 20% 6%;
 
-    --secondary: 220 15% 15%;
+    --secondary: 216 20% 18%;
     --secondary-foreground: 210 20% 98%;
 
     --muted: 220 15% 15%;
     --muted-foreground: 215 15% 60%;
 
-    --accent: 199 89% 20%;
-    --accent-foreground: 199 89% 90%;
+    --accent: 194 66% 24%;
+    --accent-foreground: 194 76% 92%;
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 210 20% 98%;
@@ -88,17 +92,17 @@
     --success: 142 60% 40%;
     --success-foreground: 210 20% 98%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
+    --border: 218 18% 22%;
+    --input: 218 18% 24%;
     --ring: 199 89% 55%;
 
-    --sidebar-background: 220 20% 8%;
+    --sidebar-background: 220 20% 10%;
     --sidebar-foreground: 210 20% 90%;
     --sidebar-primary: 199 89% 55%;
     --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 199 89% 20%;
-    --sidebar-accent-foreground: 199 89% 90%;
-    --sidebar-border: 220 15% 18%;
+    --sidebar-accent: 194 66% 24%;
+    --sidebar-accent-foreground: 194 76% 92%;
+    --sidebar-border: 218 18% 22%;
     --sidebar-ring: 199 89% 55%;
   }
 }
@@ -110,7 +114,23 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent) / 0.5), transparent 65%),
+      radial-gradient(1000px 500px at 100% -15%, hsl(var(--secondary) / 0.75), transparent 62%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Sora', 'DM Sans', system-ui, sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
   }
 }
 

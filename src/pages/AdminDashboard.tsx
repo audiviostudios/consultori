@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { LogOut, Stethoscope, Heart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight, Pill, Trash2 } from 'lucide-react';
+import { LogOut, Stethoscope, HandHeart, Calendar, Phone, Settings, Monitor, ChevronLeft, ChevronRight, Pill, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useDiesVisita, useCitesDia, useEliminarCita } from '@/hooks/useDiesVisita';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa } from '@/hooks/useConsultes';
-import { useNumeroActual, useActualitzarNumero } from '@/hooks/useNumeroActual';
+import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useReceptes, useMarcarReceptaAtesa } from '@/hooks/useReceptes';
 import { Cita, ConsultaTelefonica, DiaVisita, Recepta } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -20,18 +20,16 @@ import { Link } from 'react-router-dom';
 interface CitaCardProps {
   cita: Cita;
   isActive: boolean;
-  onSelect: () => void;
   onDelete: () => void;
 }
 
-function CitaCard({ cita, isActive, onSelect, onDelete }: CitaCardProps) {
+function CitaCard({ cita, isActive, onDelete }: CitaCardProps) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onSelect}
       className={
-        `relative p-4 rounded-lg border-2 cursor-pointer transition-all\n` +
+        `relative p-4 rounded-lg border-2 transition-all\n` +
         (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50')
       }
     >
@@ -146,7 +144,6 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
   const { data: consultes = [] } = useConsultesTelefoniques(tipus);
   const { data: receptes = [] } = useReceptes();
   const { data: numerosActuals = [] } = useNumeroActual();
-  const actualitzarNumero = useActualitzarNumero();
   const eliminarCita = useEliminarCita();
   const marcarAtesa = useMarcarConsultaAtesa();
   const marcarReceptaAtesa = useMarcarReceptaAtesa();
@@ -154,19 +151,6 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
   const citesFiltered = cites.filter(c => c.tipus === tipus);
   const numeroActual = numerosActuals.find(n => n.tipus === tipus)?.numero || 0;
   const receptesPendents = receptes.filter(r => !r.atesa);
-
-  const handleSelectCita = async (numero: number) => {
-    try {
-      await actualitzarNumero.mutateAsync({ 
-        tipus, 
-        numero, 
-        dia_visita_id: diaActual?.id 
-      });
-      toast.success(`Visitant pacient ${numero}`);
-    } catch (error) {
-      toast.error('Error al actualitzar');
-    }
-  };
 
   const handleDeleteCita = async (citaId: string) => {
     if (!confirm('Vols eliminar aquesta cita?')) return;
@@ -242,7 +226,6 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
                     key={cita.id}
                     cita={cita}
                     isActive={cita.numero_tanda === numeroActual}
-                    onSelect={() => handleSelectCita(cita.numero_tanda)}
                     onDelete={() => handleDeleteCita(cita.id)}
                   />
                 ))}
@@ -449,7 +432,7 @@ const AdminDashboard = () => {
                   Metge
                 </TabsTrigger>
                 <TabsTrigger value="infermera" className="flex items-center gap-2">
-                  <Heart className="w-4 h-4" />
+                  <HandHeart className="w-4 h-4" />
                   Infermera
                 </TabsTrigger>
               </TabsList>
@@ -478,7 +461,7 @@ const AdminDashboard = () => {
                 >
                   <DashboardSection 
                     tipus="infermera" 
-                    icon={Heart} 
+                    icon={HandHeart} 
                     titol="Infermera" 
                     diaActual={selectedDia}
                     cites={cites}

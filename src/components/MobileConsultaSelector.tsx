@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Stethoscope, Heart, ArrowLeft } from 'lucide-react';
+import { Stethoscope, HandHeart, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConsultaForm } from '@/components/ConsultaForm';
 
@@ -38,7 +38,7 @@ export function MobileConsultaSelector() {
               className="h-24 flex flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
               onClick={() => setSelectedTipus('infermera')}
             >
-              <Heart className="w-8 h-8 text-primary" />
+              <HandHeart className="w-8 h-8 text-primary" />
               <span className="text-lg font-semibold">Infermera</span>
             </Button>
           </motion.div>

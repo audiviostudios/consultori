@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, Heart, Syringe, RefreshCw, Users, CheckSquare, Square, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, HandHeart, Syringe, RefreshCw, Users, CheckSquare, Square, X, Phone, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -14,41 +14,71 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita, useCitesDia, useEliminarCita, useEliminarCitesMultiples } from '@/hooks/useDiesVisita';
+import { useConsultesTelefoniques, useEliminarConsulta, useEliminarConsultesMultiples } from '@/hooks/useConsultes';
+import { useReceptes, useEliminarRecepta, useEliminarReceptesMultiples } from '@/hooks/useReceptes';
 import { useCleanupData } from '@/hooks/useCleanupData';
-import { DiaVisita, Cita } from '@/lib/types';
+import { DiaVisita } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+const DEFAULT_HORA_INICI_METGE = '08:50';
+const DEFAULT_HORA_INICI_INFERMERA = '09:00';
 
 interface DiaVisitaCardProps {
   dia: DiaVisita;
   onUpdate: (updates: Partial<DiaVisita>) => void;
   onDelete: () => void;
+  allowHourEdit: boolean;
 }
 
-function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
+function DiaVisitaCard({ dia, onUpdate, onDelete, allowHourEdit }: DiaVisitaCardProps) {
   const dataFormatada = format(new Date(dia.data), "EEEE, d MMMM", { locale: ca });
 
   return (
     <Card>
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-primary" />
-            {dataFormatada}
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onDelete}>
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
-        </div>
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CalendarIcon className="w-5 h-5 text-primary" />
+          {dataFormatada}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Hores d'inici */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-accent/40">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Inici metge</p>
+            <Input
+              type="time"
+              value={(dia.hora_inici_metge || DEFAULT_HORA_INICI_METGE).slice(0, 5)}
+              onChange={(e) => onUpdate({ hora_inici_metge: e.target.value || DEFAULT_HORA_INICI_METGE })}
+              className="h-9"
+              disabled={!allowHourEdit}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Inici infermera</p>
+            <Input
+              type="time"
+              value={(dia.hora_inici_infermera || DEFAULT_HORA_INICI_INFERMERA).slice(0, 5)}
+              onChange={(e) => onUpdate({ hora_inici_infermera: e.target.value || DEFAULT_HORA_INICI_INFERMERA })}
+              className="h-9"
+              disabled={!allowHourEdit}
+            />
+          </div>
+        </div>
+        {!allowHourEdit && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            Per editar hores d'inici, cal aplicar la migració SQL de les columnes d'hores.
+          </p>
+        )}
+
         {/* Metge */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-2">
             <Stethoscope className="w-4 h-4" />
             <span className="font-medium">Metge</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             <Input
               type="number"
               min={1}
@@ -67,10 +97,10 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
         {/* Infermera */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4" />
+            <HandHeart className="w-4 h-4" />
             <span className="font-medium">Infermera</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             <Input
               type="number"
               min={1}
@@ -92,7 +122,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
             <Syringe className="w-4 h-4 text-warning" />
             <span className="font-medium">Vacunes Grip</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             <Input
               type="number"
               min={1}
@@ -115,7 +145,7 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
             <Syringe className="w-4 h-4 text-primary" />
             <span className="font-medium">Vacunes COVID</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             <Input
               type="number"
               min={1}
@@ -131,6 +161,13 @@ function DiaVisitaCard({ dia, onUpdate, onDelete }: DiaVisitaCardProps) {
             />
           </div>
         </div>
+
+        <div className="pt-2 border-t">
+          <Button variant="destructive" size="sm" className="w-full sm:w-auto" onClick={onDelete}>
+            <Trash2 className="w-4 h-4 mr-2" />
+            Esborrar dia de visita
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -145,14 +182,36 @@ const AdminConfig = () => {
   const eliminarDia = useEliminarDiaVisita();
   const eliminarCita = useEliminarCita();
   const eliminarCitesMultiples = useEliminarCitesMultiples();
+  const eliminarConsulta = useEliminarConsulta();
+  const eliminarConsultesMultiples = useEliminarConsultesMultiples();
+  const eliminarRecepta = useEliminarRecepta();
+  const eliminarReceptesMultiples = useEliminarReceptesMultiples();
   const cleanupData = useCleanupData();
   
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedDiaPerCites, setSelectedDiaPerCites] = useState<string | undefined>(undefined);
+  const [selectedDiaPerConsultes, setSelectedDiaPerConsultes] = useState<string | undefined>(undefined);
+  const [selectedDiaPerReceptes, setSelectedDiaPerReceptes] = useState<string | undefined>(undefined);
   const [selectedCites, setSelectedCites] = useState<Set<string>>(new Set());
+  const [selectedConsultes, setSelectedConsultes] = useState<Set<string>>(new Set());
+  const [selectedReceptes, setSelectedReceptes] = useState<Set<string>>(new Set());
   
   // Obtenir cites del dia seleccionat
   const { data: citesDelDia = [] } = useCitesDia(selectedDiaPerCites);
+  const { data: consultes = [] } = useConsultesTelefoniques();
+  const { data: receptes = [] } = useReceptes();
+  const dataConsultesSeleccionada = diesVisita.find((d) => d.id === selectedDiaPerConsultes)?.data;
+  const dataReceptesSeleccionada = diesVisita.find((d) => d.id === selectedDiaPerReceptes)?.data;
+  const consultesFiltrades = dataConsultesSeleccionada
+    ? consultes.filter((c) => format(new Date(c.created_at), 'yyyy-MM-dd') === dataConsultesSeleccionada)
+    : [];
+  const receptesFiltrades = dataReceptesSeleccionada
+    ? receptes.filter((r) => format(new Date(r.created_at), 'yyyy-MM-dd') === dataReceptesSeleccionada)
+    : [];
+  const allowHourEdit = diesVisita.length === 0
+    ? true
+    : Object.prototype.hasOwnProperty.call(diesVisita[0] as object, 'hora_inici_metge') &&
+      Object.prototype.hasOwnProperty.call(diesVisita[0] as object, 'hora_inici_infermera');
   
   // Dates que ja tenen visita configurada
   const diesExistents = diesVisita.map(d => new Date(d.data));
@@ -224,7 +283,12 @@ const AdminConfig = () => {
     try {
       await actualitzarDia.mutateAsync({ id, ...updates });
     } catch (error) {
-      toast.error('Error al actualitzar');
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('hora_inici_metge') || message.includes('hora_inici_infermera') || message.includes('column')) {
+        toast.error('No es poden editar hores: falta aplicar la migració SQL al Supabase');
+      } else {
+        toast.error('Error al actualitzar');
+      }
     }
   };
 
@@ -288,6 +352,102 @@ const AdminConfig = () => {
     }
   };
 
+  const handleToggleConsulta = (consultaId: string) => {
+    setSelectedConsultes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(consultaId)) {
+        newSet.delete(consultaId);
+      } else {
+        newSet.add(consultaId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllConsultes = () => {
+    if (selectedConsultes.size === consultesFiltrades.length) {
+      setSelectedConsultes(new Set());
+    } else {
+      setSelectedConsultes(new Set(consultesFiltrades.map((consulta) => consulta.id)));
+    }
+  };
+
+  const handleEliminarConsulta = async (id: string) => {
+    try {
+      await eliminarConsulta.mutateAsync({ id });
+      setSelectedConsultes((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      toast.success('Consulta eliminada');
+    } catch (error) {
+      toast.error('Error al eliminar la consulta');
+    }
+  };
+
+  const handleEliminarConsultesSeleccionades = async () => {
+    if (selectedConsultes.size === 0) return;
+
+    if (!confirm(`Estàs segur que vols eliminar ${selectedConsultes.size} consulta${selectedConsultes.size > 1 ? 's' : ''}?`)) return;
+
+    try {
+      await eliminarConsultesMultiples.mutateAsync({ ids: Array.from(selectedConsultes) });
+      setSelectedConsultes(new Set());
+      toast.success(`${selectedConsultes.size} consulta${selectedConsultes.size > 1 ? 's' : ''} eliminada${selectedConsultes.size > 1 ? 'es' : ''}`);
+    } catch (error) {
+      toast.error('Error al eliminar les consultes');
+    }
+  };
+
+  const handleToggleRecepta = (receptaId: string) => {
+    setSelectedReceptes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(receptaId)) {
+        newSet.delete(receptaId);
+      } else {
+        newSet.add(receptaId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllReceptes = () => {
+    if (selectedReceptes.size === receptesFiltrades.length) {
+      setSelectedReceptes(new Set());
+    } else {
+      setSelectedReceptes(new Set(receptesFiltrades.map((recepta) => recepta.id)));
+    }
+  };
+
+  const handleEliminarRecepta = async (id: string) => {
+    try {
+      await eliminarRecepta.mutateAsync({ id });
+      setSelectedReceptes((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      toast.success('Recepta eliminada');
+    } catch (error) {
+      toast.error('Error al eliminar la recepta');
+    }
+  };
+
+  const handleEliminarReceptesSeleccionades = async () => {
+    if (selectedReceptes.size === 0) return;
+
+    if (!confirm(`Estàs segur que vols eliminar ${selectedReceptes.size} recepta${selectedReceptes.size > 1 ? 'es' : ''}?`)) return;
+
+    try {
+      await eliminarReceptesMultiples.mutateAsync({ ids: Array.from(selectedReceptes) });
+      setSelectedReceptes(new Set());
+      toast.success(`${selectedReceptes.size} recepta${selectedReceptes.size > 1 ? 'es' : ''} eliminada${selectedReceptes.size > 1 ? 'es' : ''}`);
+    } catch (error) {
+      toast.error('Error al eliminar les receptes');
+    }
+  };
+
   if (loading || loadingDies) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -301,21 +461,21 @@ const AdminConfig = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/admin">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Tornar
             </Link>
           </Button>
-          <div>
-            <h1 className="text-xl font-bold">Configuració de dies</h1>
-            <p className="text-sm text-muted-foreground">Gestiona els dies de visita</p>
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold truncate">Configuració de dies</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Gestiona els dies de visita</p>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -356,7 +516,7 @@ const AdminConfig = () => {
                     modifiersClassNames={{
                       existing: 'bg-primary/20 text-primary font-bold'
                     }}
-                    className={cn("p-3 pointer-events-auto rounded-md border")}
+                    className={cn("p-2 sm:p-3 pointer-events-auto rounded-md border")}
                   />
                 </div>
               </div>
@@ -372,6 +532,7 @@ const AdminConfig = () => {
                   onClick={handleCrearDies} 
                   disabled={crearDia.isPending || selectedDates.length === 0}
                   size="lg"
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Afegir {selectedDates.length > 0 ? `${selectedDates.length} dia${selectedDates.length > 1 ? 's' : ''}` : 'dies'}
@@ -417,11 +578,12 @@ const AdminConfig = () => {
 
               {selectedDiaPerCites && citesDelDia.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAllCites}
+                      className="w-full sm:w-auto"
                     >
                       {selectedCites.size === citesDelDia.length ? (
                         <>
@@ -442,6 +604,7 @@ const AdminConfig = () => {
                         size="sm"
                         onClick={handleEliminarCitesSeleccionades}
                         disabled={eliminarCitesMultiples.isPending}
+                        className="w-full sm:w-auto"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Eliminar {selectedCites.size} seleccionada{selectedCites.size > 1 ? 'es' : ''}
@@ -455,28 +618,28 @@ const AdminConfig = () => {
                       .map((cita) => (
                         <div
                           key={cita.id}
-                          className="flex items-center justify-between p-3 hover:bg-muted/50"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 hover:bg-muted/50"
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-start sm:items-center gap-3 min-w-0">
                             <Checkbox
                               checked={selectedCites.has(cita.id)}
                               onCheckedChange={() => handleToggleCita(cita.id)}
                             />
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <Badge variant={cita.tipus === 'metge' ? 'default' : 'secondary'}>
                                 {cita.numero_tanda}
                               </Badge>
                               {cita.tipus === 'metge' ? (
                                 <Stethoscope className="w-4 h-4 text-primary" />
                               ) : cita.tipus === 'infermera' ? (
-                                <Heart className="w-4 h-4 text-pink-500" />
+                                <HandHeart className="w-4 h-4 text-pink-500" />
                               ) : (
                                 <Syringe className="w-4 h-4 text-amber-500" />
                               )}
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">{cita.nom_complet}</p>
-                              <p className="text-xs text-muted-foreground">{cita.telefon}</p>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm break-words">{cita.nom_complet}</p>
+                              <p className="text-xs text-muted-foreground break-all">{cita.telefon}</p>
                             </div>
                           </div>
                           <Button
@@ -484,11 +647,242 @@ const AdminConfig = () => {
                             size="sm"
                             onClick={() => handleEliminarCita(cita.id)}
                             disabled={eliminarCita.isPending}
+                            className="self-end sm:self-auto"
                           >
                             <X className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
                       ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gestió de consultes telefòniques */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="w-5 h-5" />
+                Gestió de consultes telefòniques
+              </CardTitle>
+              <CardDescription>
+                Elimina consultes pendents o ateses des d'aquest panell
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select value={selectedDiaPerConsultes} onValueChange={(value) => {
+                setSelectedDiaPerConsultes(value);
+                setSelectedConsultes(new Set());
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtra per dia de visita..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {diesVisita.map((dia) => (
+                    <SelectItem key={dia.id} value={dia.id}>
+                      {format(new Date(dia.data), "EEEE, d MMMM", { locale: ca })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {!selectedDiaPerConsultes ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Phone className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Selecciona un dia per veure les consultes</p>
+                </div>
+              ) : consultesFiltrades.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Phone className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No hi ha consultes registrades per aquest dia</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllConsultes}
+                      className="w-full sm:w-auto"
+                    >
+                      {selectedConsultes.size === consultesFiltrades.length ? (
+                        <>
+                          <Square className="w-4 h-4 mr-2" />
+                          Desseleccionar tot
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="w-4 h-4 mr-2" />
+                          Seleccionar tot
+                        </>
+                      )}
+                    </Button>
+
+                    {selectedConsultes.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleEliminarConsultesSeleccionades}
+                        disabled={eliminarConsultesMultiples.isPending}
+                        className="w-full sm:w-auto"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Eliminar {selectedConsultes.size} seleccionada{selectedConsultes.size > 1 ? 'es' : ''}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="divide-y rounded-lg border">
+                    {consultesFiltrades.map((consulta) => (
+                      <div
+                        key={consulta.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 hover:bg-muted/50"
+                      >
+                        <div className="flex items-start sm:items-center gap-3 min-w-0">
+                          <Checkbox
+                            checked={selectedConsultes.has(consulta.id)}
+                            onCheckedChange={() => handleToggleConsulta(consulta.id)}
+                          />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant={consulta.tipus === 'metge' ? 'default' : 'secondary'}>
+                              {consulta.tipus === 'metge' ? 'Metge' : 'Infermera'}
+                            </Badge>
+                            <Phone className="w-4 h-4 text-sky-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm break-words">{consulta.nom_complet}</p>
+                            <p className="text-xs text-muted-foreground break-all">{consulta.telefon}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {consulta.atesa ? 'Atesa' : 'Pendent'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEliminarConsulta(consulta.id)}
+                          disabled={eliminarConsulta.isPending}
+                          className="self-end sm:self-auto"
+                        >
+                          <X className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gestió de receptes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="w-5 h-5" />
+                Gestió de receptes
+              </CardTitle>
+              <CardDescription>
+                Elimina sol·licituds de recepta pendents o ateses
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select value={selectedDiaPerReceptes} onValueChange={(value) => {
+                setSelectedDiaPerReceptes(value);
+                setSelectedReceptes(new Set());
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtra per dia de visita..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {diesVisita.map((dia) => (
+                    <SelectItem key={dia.id} value={dia.id}>
+                      {format(new Date(dia.data), "EEEE, d MMMM", { locale: ca })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {!selectedDiaPerReceptes ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Pill className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Selecciona un dia per veure les receptes</p>
+                </div>
+              ) : receptesFiltrades.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Pill className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No hi ha receptes registrades per aquest dia</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllReceptes}
+                      className="w-full sm:w-auto"
+                    >
+                      {selectedReceptes.size === receptesFiltrades.length ? (
+                        <>
+                          <Square className="w-4 h-4 mr-2" />
+                          Desseleccionar tot
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="w-4 h-4 mr-2" />
+                          Seleccionar tot
+                        </>
+                      )}
+                    </Button>
+
+                    {selectedReceptes.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleEliminarReceptesSeleccionades}
+                        disabled={eliminarReceptesMultiples.isPending}
+                        className="w-full sm:w-auto"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Eliminar {selectedReceptes.size} seleccionada{selectedReceptes.size > 1 ? 'es' : ''}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="divide-y rounded-lg border">
+                    {receptesFiltrades.map((recepta) => (
+                      <div
+                        key={recepta.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 hover:bg-muted/50"
+                      >
+                        <div className="flex items-start sm:items-center gap-3 min-w-0">
+                          <Checkbox
+                            checked={selectedReceptes.has(recepta.id)}
+                            onCheckedChange={() => handleToggleRecepta(recepta.id)}
+                          />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Pill className="w-4 h-4 text-violet-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm break-words">{recepta.nom_complet}</p>
+                            <p className="text-xs text-muted-foreground break-all">{recepta.telefon}</p>
+                            <p className="text-xs text-muted-foreground break-words">{recepta.medicament}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {recepta.atesa ? 'Atesa' : 'Pendent'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEliminarRecepta(recepta.id)}
+                          disabled={eliminarRecepta.isPending}
+                          className="self-end sm:self-auto"
+                        >
+                          <X className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -511,6 +905,7 @@ const AdminConfig = () => {
                 variant="destructive" 
                 onClick={handleCleanup} 
                 disabled={cleanupData.isPending}
+                className="w-full sm:w-auto"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${cleanupData.isPending ? 'animate-spin' : ''}`} />
                 {cleanupData.isPending ? 'Netejant...' : 'Netejar dades antigues'}
@@ -534,6 +929,7 @@ const AdminConfig = () => {
                   dia={dia}
                   onUpdate={(updates) => handleUpdateDia(dia.id, updates)}
                   onDelete={() => handleDeleteDia(dia.id)}
+                  allowHourEdit={allowHourEdit}
                 />
               ))}
             </div>

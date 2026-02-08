@@ -169,7 +169,7 @@ export function ConsultaForm({ tipus }: ConsultaFormProps) {
             </Label>
             <RadioGroup
               value={formData.urgencia}
-              onValueChange={(value) => setFormData({ ...formData, urgencia: value as any })}
+              onValueChange={(value: 'baixa' | 'mitjana' | 'alta') => setFormData({ ...formData, urgencia: value })}
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">

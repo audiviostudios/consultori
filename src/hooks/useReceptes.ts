@@ -84,3 +84,41 @@ export function useMarcarReceptaAtesa() {
     },
   });
 }
+
+export function useEliminarRecepta() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase
+        .from('receptes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receptes'] });
+    },
+  });
+}
+
+export function useEliminarReceptesMultiples() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids }: { ids: string[] }) => {
+      const { error } = await supabase
+        .from('receptes')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receptes'] });
+    },
+  });
+}

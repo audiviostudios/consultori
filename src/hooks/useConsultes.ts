@@ -62,3 +62,41 @@ export function useMarcarConsultaAtesa() {
     },
   });
 }
+
+export function useEliminarConsulta() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase
+        .from('consultes_telefoniques')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultes'] });
+    },
+  });
+}
+
+export function useEliminarConsultesMultiples() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids }: { ids: string[] }) => {
+      const { error } = await supabase
+        .from('consultes_telefoniques')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultes'] });
+    },
+  });
+}

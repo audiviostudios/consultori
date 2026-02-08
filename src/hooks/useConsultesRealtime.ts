@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 // URL del so d'alerta
@@ -37,7 +38,7 @@ export function useConsultesRealtime(tipus: 'metge' | 'infermera' | null) {
           }
 
           // Mostrar toast d'alerta
-          const consulta = payload.new as any;
+          const consulta = payload.new as Database['public']['Tables']['consultes_telefoniques']['Row'];
           toast.warning(`Nova consulta telefònica!`, {
             description: `${consulta.nom_complet} - ${consulta.urgencia === 'alta' ? '🔴 URGENT' : consulta.urgencia === 'mitjana' ? '🟡 Mitjana' : '🟢 Baixa'}`,
             duration: 10000,

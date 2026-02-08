@@ -104,3 +104,24 @@ export function useActualitzarNomProfessional() {
     },
   });
 }
+
+export function useToggleEmergencia() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tipus, emergencia_activa }: { tipus: 'metge' | 'infermera'; emergencia_activa: boolean }) => {
+      const { data, error } = await supabase
+        .from('numero_actual')
+        .update({ emergencia_activa })
+        .eq('tipus', tipus)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['numero-actual'] });
+    },
+  });
+}

@@ -85,7 +85,7 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
       
       // Enviar recordatori per email només si hi ha correu
       if (formData.email) {
-        supabase.functions.invoke('enviar-recordatori', {
+        const { error: reminderError } = await supabase.functions.invoke('enviar-recordatori', {
           body: {
             email: formData.email,
             nom: formData.nom_complet,
@@ -94,13 +94,19 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
             data: dataVisita || new Date().toISOString(),
             pin_cancelacio: pin,
           },
-        }).catch(console.error);
+        });
+
+        if (reminderError) {
+          console.error('Error enviant recordatori:', reminderError);
+          toast.warning("Cita reservada, però el correu de recordatori no s'ha pogut enviar");
+        }
       }
       
       setIsConfirmed(true);
       toast.success('Cita reservada correctament!');
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error: unknown) {
+      const dbError = error as { code?: string };
+      if (dbError.code === '23505') {
         toast.error('Aquesta tanda ja ha estat reservada');
         setIsDialogOpen(false);
       } else {

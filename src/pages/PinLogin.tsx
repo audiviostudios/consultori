@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, AlertCircle, Stethoscope, Heart } from 'lucide-react';
+import { Lock, AlertCircle, Stethoscope, HandHeart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,7 +57,7 @@ const PinLogin = () => {
                 <Stethoscope className="w-6 h-6 text-primary" />
               </div>
               <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
-                <Heart className="w-6 h-6 text-accent-foreground" />
+                <HandHeart className="w-6 h-6 text-accent-foreground" />
               </div>
             </div>
             <CardTitle className="text-2xl">Accés Personal Sanitari</CardTitle>

@@ -1,21 +1,14 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Stethoscope, Heart, ArrowRight, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Stethoscope, HandHeart, ArrowRight, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useCitesDia, useDiaVisitaActual, useDiesVisita } from '@/hooks/useDiesVisita';
 import { useNumeroChangeSound } from '@/hooks/useNumeroChangeSound';
+import { useConsultesTelefoniques } from '@/hooks/useConsultes';
+import { useReceptes } from '@/hooks/useReceptes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Cita } from '@/lib/types';
-
-// Extreu el cognom d'un nom complet
-const getCognom = (nomComplet: string): string => {
-  const parts = nomComplet.trim().split(' ');
-  if (parts.length > 1) {
-    return parts[1]; // Retorna el primer cognom
-  }
-  return parts[0]; // Si només hi ha un nom, el retorna
-};
 
 // Extreu les inicials d'un nom complet (p.ex. "Paco Seró" -> "P. S.")
 const getInicials = (nomComplet: string): string => {
@@ -44,15 +37,15 @@ const LlistaTorns = ({
   textColor 
 }: { 
   cites: Cita[];
-  tipus: 'metge' | 'infermera';
+  tipus: Array<'metge' | 'infermera' | 'grip' | 'covid'>;
   maxTorns: number;
   numeroActual: number;
   textColor: string;
 }) => {
-  const citesDelTipus = cites.filter(c => c.tipus === tipus);
+  const citesDelTipus = cites.filter(c => tipus.includes(c.tipus));
   
   return (
-    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">
+    <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3.5 mt-4">
       {Array.from({ length: maxTorns }, (_, i) => i + 1).map(num => {
         const cita = citesDelTipus.find(c => c.numero_tanda === num);
         const isActual = num === numeroActual;
@@ -76,7 +69,7 @@ const LlistaTorns = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: num * 0.03 }}
             className={`
-              flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl min-w-[60px] sm:min-w-[70px]
+              flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-xl min-w-[66px] sm:min-w-[76px]
               ${bgClass}
             `}
           >
@@ -88,7 +81,7 @@ const LlistaTorns = ({
             }`}>
               {num}
             </span>
-            <span className={`text-[10px] sm:text-xs truncate max-w-[55px] sm:max-w-[65px] text-center ${
+            <span className={`text-xs sm:text-sm truncate max-w-[60px] sm:max-w-[70px] text-center leading-tight ${
               cita ? (isVisitat ? 'text-green-700' : isNoAssistit ? 'text-red-700' : 'text-foreground') : 'text-muted-foreground/40'
             }`}>
               {cita ? getInicials(cita.nom_complet) : '—'}
@@ -121,7 +114,11 @@ const NumeroDisplay = ({
   cites,
   maxTorns,
   nomProfessional,
-  estatVisita
+  estatVisita,
+  consultesPendents,
+  receptesPendents,
+  emergenciaActiva,
+  tipusCita,
 }: { 
   numero: number; 
   tipus: string;
@@ -133,11 +130,13 @@ const NumeroDisplay = ({
   maxTorns: number;
   nomProfessional: string | null;
   estatVisita: 'visitat' | 'no_assistit' | null;
+  consultesPendents: number;
+  receptesPendents: number;
+  emergenciaActiva: boolean;
+  tipusCita: Array<'metge' | 'infermera' | 'grip' | 'covid'>;
 }) => {
-  const tipusCita = tipus.toLowerCase() as 'metge' | 'infermera';
-  
   // Trobar les inicials del pacient actual
-  const citaActual = cites.find(c => c.tipus === tipusCita && c.numero_tanda === numero);
+  const citaActual = cites.find(c => tipusCita.includes(c.tipus) && c.numero_tanda === numero);
   const inicialsActual = citaActual ? getInicials(citaActual.nom_complet) : null;
   
   return (
@@ -220,11 +219,24 @@ const NumeroDisplay = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground"
+            className="mt-2.5 flex items-center justify-center gap-2 text-muted-foreground"
           >
-            <ArrowRight className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">Prepari's el</span>
-            <span className={`text-lg sm:text-xl font-bold ${textColor}`}>{seguentNumero}</span>
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base font-medium">Prepari's el</span>
+            <span className={`text-xl sm:text-2xl font-bold ${textColor}`}>{seguentNumero}</span>
+          </motion.div>
+        )}
+
+        {emergenciaActiva && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 mx-2 rounded-2xl border border-red-400/60 bg-red-500/15 px-3 py-2 text-red-700"
+          >
+            <p className="text-sm sm:text-base font-semibold flex items-center justify-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Atenent una urgència, esperi.
+            </p>
           </motion.div>
         )}
       </div>
@@ -239,6 +251,15 @@ const NumeroDisplay = ({
           textColor={textColor}
         />
       </div>
+
+      <div className="mt-3 text-[11px] sm:text-xs text-muted-foreground text-center space-y-0.5">
+        <p>
+          <span className="font-semibold text-foreground">{consultesPendents}</span> consultes telefòniques
+        </p>
+        <p>
+          <span className="font-semibold text-foreground">{receptesPendents}</span> receptes
+        </p>
+      </div>
     </motion.div>
   );
 };
@@ -247,37 +268,77 @@ const Pantalla = () => {
   const { data: numerosActuals = [] } = useNumeroActual();
   const { data: diesVisita = [] } = useDiesVisita();
   const { data: diaActual } = useDiaVisitaActual();
+  const { data: consultesMetge = [] } = useConsultesTelefoniques('metge');
+  const { data: consultesInfermera = [] } = useConsultesTelefoniques('infermera');
+  const { data: receptes = [] } = useReceptes();
   const isMobile = useIsMobile();
   
   const metgeData = numerosActuals.find(n => n.tipus === 'metge');
   const infermeraData = numerosActuals.find(n => n.tipus === 'infermera');
 
-  // Important: agafem les cites del mateix dia que està assignat al número actual
+  // La pantalla reflecteix el dia actiu dels professionals (si n'hi ha),
+  // i cau al dia actual només quan no hi ha cap dia actiu.
   const diaVisitaIdPantalla = metgeData?.dia_visita_id || infermeraData?.dia_visita_id || diaActual?.id;
   const { data: cites = [] } = useCitesDia(diaVisitaIdPantalla);
-
-  const diaPantalla = diesVisita.find(d => d.id === diaVisitaIdPantalla) || diaActual;
+  const diaPantalla = diesVisita.find((d) => d.id === diaVisitaIdPantalla) || diaActual;
   
-  const numeroMetge = metgeData?.numero || 0;
-  const numeroInfermera = infermeraData?.numero || 0;
+  const numeroMetgeGuardat = metgeData?.numero || 0;
+  const numeroInfermeraGuardat = infermeraData?.numero || 0;
+  const citesMetgeDia = cites.filter((c) => c.tipus === 'metge');
+  const tipusInfermeraPantalla: Array<'infermera' | 'grip' | 'covid'> = [
+    'infermera',
+    ...(diaPantalla?.vacunes_grip_actiu ? ['grip' as const] : []),
+    ...(diaPantalla?.vacunes_covid_actiu ? ['covid' as const] : []),
+  ];
+  const citesInfermeraDia = cites.filter((c) => tipusInfermeraPantalla.includes(c.tipus as 'infermera' | 'grip' | 'covid'));
+  const metgeTornExisteix = citesMetgeDia.some((c) => c.numero_tanda === numeroMetgeGuardat);
+  const infermeraTornExisteix = citesInfermeraDia.some((c) => c.numero_tanda === numeroInfermeraGuardat);
+
+  // Mostrem el número actiu si hi ha agenda del dia per aquell professional;
+  // si no hi ha cap cita del dia, forcem 0.
+  const metgeValidAvui =
+    citesMetgeDia.length > 0 &&
+    numeroMetgeGuardat > 0 &&
+    (metgeTornExisteix || numeroMetgeGuardat <= (diaPantalla?.max_tandes_metge || 0));
+  const infermeraValidAvui =
+    citesInfermeraDia.length > 0 &&
+    numeroInfermeraGuardat > 0 &&
+    (infermeraTornExisteix || numeroInfermeraGuardat <= (diaPantalla?.max_tandes_infermera || 0));
+
+  // Si no hi ha cita actual vàlida del dia, mostrar 0
+  const numeroMetge = metgeValidAvui ? numeroMetgeGuardat : 0;
+  const numeroInfermera = infermeraValidAvui ? numeroInfermeraGuardat : 0;
   const nomMetge = metgeData?.nom_professional || null;
   const nomInfermera = infermeraData?.nom_professional || null;
-  const estatMetge = metgeData?.estat_visita || null;
-  const estatInfermera = infermeraData?.estat_visita || null;
+  const estatMetge = metgeValidAvui ? metgeData?.estat_visita || null : null;
+  const estatInfermera = infermeraValidAvui ? infermeraData?.estat_visita || null : null;
+  const emergenciaMetge = metgeData?.emergencia_activa || false;
+  const emergenciaInfermera = infermeraData?.emergencia_activa || false;
+  const consultesMetgePendents = consultesMetge.filter((c) => !c.atesa).length;
+  const consultesInfermeraPendents = consultesInfermera.filter((c) => !c.atesa).length;
+  const receptesPendents = receptes.filter((r) => !r.atesa).length;
 
-  // So quan canvia el número
-  useNumeroChangeSound(numeroMetge, numeroInfermera);
+  // So quan canvia el número (requereix activació inicial de l'àudio al navegador)
+  const { isSoundEnabled, activateSound } = useNumeroChangeSound(numeroMetge, numeroInfermera);
 
   // Trobar el número següent amb cita reservada
-  const getNumeroSeguent = (tipus: 'metge' | 'infermera', actual: number) => {
+  const getNumeroSeguent = (
+    tipus: Array<'metge' | 'infermera' | 'grip' | 'covid'>,
+    actual: number
+  ) => {
     const citesDelTipus = cites
-      .filter(c => c.tipus === tipus && c.numero_tanda > actual)
+      .filter(c => tipus.includes(c.tipus) && c.numero_tanda > actual)
       .sort((a, b) => a.numero_tanda - b.numero_tanda);
     return citesDelTipus[0]?.numero_tanda || null;
   };
 
-  const seguentMetge = getNumeroSeguent('metge', numeroMetge);
-  const seguentInfermera = getNumeroSeguent('infermera', numeroInfermera);
+  const seguentMetge = getNumeroSeguent(['metge'], numeroMetge);
+  const seguentInfermera = getNumeroSeguent(tipusInfermeraPantalla, numeroInfermera);
+  const maxTornsInfermera = Math.max(
+    diaPantalla?.max_tandes_infermera || 10,
+    diaPantalla?.vacunes_grip_actiu ? (diaPantalla?.max_tandes_grip || 10) : 0,
+    diaPantalla?.vacunes_covid_actiu ? (diaPantalla?.max_tandes_covid || 10) : 0,
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -290,10 +351,23 @@ const Pantalla = () => {
           </Link>
         </Button>
       </div>
+      {!isSoundEnabled && (
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 sm:h-9 gap-1.5"
+            onClick={() => activateSound()}
+          >
+            <Volume2 className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">Activar so</span>
+          </Button>
+        </div>
+      )}
 
       <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row'}`}>
         {/* Metge */}
-        <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'border-b' : 'border-r'} border-border p-4`}>
+        <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'border-b' : 'border-r'} border-border p-4 ${emergenciaMetge ? 'bg-red-500/10' : ''}`}>
           <NumeroDisplay
             numero={numeroMetge}
             tipus="Metge"
@@ -305,22 +379,30 @@ const Pantalla = () => {
             maxTorns={diaPantalla?.max_tandes_metge || 10}
             nomProfessional={nomMetge}
             estatVisita={estatMetge}
+            consultesPendents={consultesMetgePendents}
+            receptesPendents={receptesPendents}
+            emergenciaActiva={emergenciaMetge}
+            tipusCita={['metge']}
           />
         </div>
 
         {/* Infermera */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className={`flex-1 flex flex-col items-center justify-center p-4 ${emergenciaInfermera ? 'bg-red-500/10' : ''}`}>
           <NumeroDisplay
             numero={numeroInfermera}
             tipus="Infermera"
-            icon={Heart}
+            icon={HandHeart}
             iconBg="bg-accent"
             textColor="text-accent-foreground"
             seguentNumero={seguentInfermera}
             cites={cites}
-            maxTorns={diaPantalla?.max_tandes_infermera || 10}
+            maxTorns={maxTornsInfermera}
             nomProfessional={nomInfermera}
             estatVisita={estatInfermera}
+            consultesPendents={consultesInfermeraPendents}
+            receptesPendents={0}
+            emergenciaActiva={emergenciaInfermera}
+            tipusCita={tipusInfermeraPantalla}
           />
         </div>
       </div>
