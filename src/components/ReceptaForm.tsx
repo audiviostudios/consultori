@@ -83,7 +83,7 @@ export function ReceptaForm() {
             <div className="text-center space-y-2">
               <p className="text-xl font-semibold">Sol·licitud rebuda</p>
               <p className="text-muted-foreground">
-                El metge prepararà la teva recepta i et trucarà quan estigui llesta
+                El metge revisarà la sol·licitud. Si has indicat correu, rebràs una notificació quan estigui renovada.
               </p>
             </div>
 
@@ -113,7 +113,7 @@ export function ReceptaForm() {
           Sol·licitar recepta
         </CardTitle>
         <CardDescription>
-          Demana la renovació de la teva medicació i et trucarem quan estigui llesta
+          Demana la renovació de la teva medicació.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -165,6 +165,9 @@ export function ReceptaForm() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="joan@exemple.cat (opcional)"
             />
+            <p className="text-xs text-muted-foreground">
+              Si indiques correu electrònic, t'enviarem una notificació quan la recepta estigui renovada.
+            </p>
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email}</p>
             )}

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stethoscope, HandHeart, ArrowRight, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Volume2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ca } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { useNumeroActual } from '@/hooks/useNumeroActual';
 import { useCitesDia, useDiaVisitaActual, useDiesVisita } from '@/hooks/useDiesVisita';
@@ -138,6 +140,7 @@ const NumeroDisplay = ({
   // Trobar les inicials del pacient actual
   const citaActual = cites.find(c => tipusCita.includes(c.tipus) && c.numero_tanda === numero);
   const inicialsActual = citaActual ? getInicials(citaActual.nom_complet) : null;
+  const numeroDisplay = numero === 0 ? '✕' : numero;
   
   return (
     <motion.div
@@ -165,14 +168,14 @@ const NumeroDisplay = ({
       <div className="flex flex-col items-center mt-2 sm:mt-4">
         <AnimatePresence mode="wait">
           <motion.div
-            key={numero}
+            key={String(numeroDisplay)}
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 1.5, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={`text-[5rem] sm:text-[6rem] md:text-[8rem] font-bold ${textColor} leading-none`}
           >
-            {numero}
+            {numeroDisplay}
           </motion.div>
         </AnimatePresence>
         
@@ -276,11 +279,11 @@ const Pantalla = () => {
   const metgeData = numerosActuals.find(n => n.tipus === 'metge');
   const infermeraData = numerosActuals.find(n => n.tipus === 'infermera');
 
-  // La pantalla reflecteix el dia actiu dels professionals (si n'hi ha),
-  // i cau al dia actual només quan no hi ha cap dia actiu.
-  const diaVisitaIdPantalla = metgeData?.dia_visita_id || infermeraData?.dia_visita_id || diaActual?.id;
+  // Sempre mostrem el proper dia de visita disponible al calendari.
+  const properDiaVisita = diesVisita.length > 0 ? diesVisita[0] : null;
+  const diaPantalla = properDiaVisita || diaActual || null;
+  const diaVisitaIdPantalla = diaPantalla?.id;
   const { data: cites = [] } = useCitesDia(diaVisitaIdPantalla);
-  const diaPantalla = diesVisita.find((d) => d.id === diaVisitaIdPantalla) || diaActual;
   
   const numeroMetgeGuardat = metgeData?.numero || 0;
   const numeroInfermeraGuardat = infermeraData?.numero || 0;
@@ -296,11 +299,15 @@ const Pantalla = () => {
 
   // Mostrem el número actiu si hi ha agenda del dia per aquell professional;
   // si no hi ha cap cita del dia, forcem 0.
+  const metgeNumeroDelDia = metgeData?.dia_visita_id === diaVisitaIdPantalla;
+  const infermeraNumeroDelDia = infermeraData?.dia_visita_id === diaVisitaIdPantalla;
   const metgeValidAvui =
+    metgeNumeroDelDia &&
     citesMetgeDia.length > 0 &&
     numeroMetgeGuardat > 0 &&
     (metgeTornExisteix || numeroMetgeGuardat <= (diaPantalla?.max_tandes_metge || 0));
   const infermeraValidAvui =
+    infermeraNumeroDelDia &&
     citesInfermeraDia.length > 0 &&
     numeroInfermeraGuardat > 0 &&
     (infermeraTornExisteix || numeroInfermeraGuardat <= (diaPantalla?.max_tandes_infermera || 0));
@@ -339,6 +346,9 @@ const Pantalla = () => {
     diaPantalla?.vacunes_grip_actiu ? (diaPantalla?.max_tandes_grip || 10) : 0,
     diaPantalla?.vacunes_covid_actiu ? (diaPantalla?.max_tandes_covid || 10) : 0,
   );
+  const dataPantalla = diaPantalla?.data
+    ? format(new Date(diaPantalla.data), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ca })
+    : null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -362,6 +372,14 @@ const Pantalla = () => {
             <Volume2 className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Activar so</span>
           </Button>
+        </div>
+      )}
+
+      {dataPantalla && (
+        <div className="pt-12 sm:pt-14 px-4">
+          <p className="text-center text-sm sm:text-base text-muted-foreground">
+            Consultes del <span className="font-semibold text-foreground capitalize">{dataPantalla}</span>
+          </p>
         </div>
       )}
 

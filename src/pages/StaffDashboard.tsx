@@ -19,6 +19,7 @@ import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, u
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { useReceptes, useMarcarReceptaAtesa, useCrearRecepta } from '@/hooks/useReceptes';
 import { useConsultesTelefoniques, useMarcarConsultaAtesa, useCrearConsulta } from '@/hooks/useConsultes';
+import { supabase } from '@/integrations/supabase/client';
 import { Cita, DiaVisita, Recepta, ConsultaTelefonica } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -573,13 +574,33 @@ const StaffDashboard = () => {
     }
   };
 
+  const handleResetMarcador = async () => {
+    if (!staffRole) return;
+    try {
+      await actualitzarNumero.mutateAsync({
+        tipus: staffRole,
+        numero: 0,
+        dia_visita_id: selectedDia?.id,
+      });
+      setActiveCitaId(null);
+      toast.info('Marcador reiniciat: encara no s\'ha començat a cridar');
+    } catch {
+      toast.error('Error al reiniciar el marcador');
+    }
+  };
+
   const handleAssistit = async () => {
     if (!staffRole) return;
     try {
       const citaActual = activeCitaId ? citesFiltered.find(c => c.id === activeCitaId) : null;
       if (citaActual) {
-        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'visitat' });
-        toast.success('Pacient marcat com a assistit');
+        const nouEstat = citaActual.estat_assistencia === 'visitat' ? null : 'visitat';
+        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: nouEstat });
+        if (nouEstat === 'visitat') {
+          toast.success('Pacient marcat com a assistit');
+        } else {
+          toast.info('Estat de visita desactivat');
+        }
       }
     } catch (error) {
       toast.error('Error al marcar');
@@ -601,7 +622,23 @@ const StaffDashboard = () => {
 
   const handleMarcarReceptaAtesa = async (id: string) => {
     try {
+      const recepta = receptes.find((r) => r.id === id);
       await marcarReceptaAtesa.mutateAsync({ id, atesa: true });
+      if (recepta?.email) {
+        const { error: mailError } = await supabase.functions.invoke('enviar-recepta-renovada', {
+          body: {
+            email: recepta.email,
+            nom: recepta.nom_complet,
+            medicament: recepta.medicament,
+          },
+        });
+
+        if (mailError) {
+          console.error('Error enviant notificacio de recepta renovada:', mailError);
+          toast.warning('Recepta marcada com atesa, pero no s\'ha pogut enviar el correu');
+          return;
+        }
+      }
       toast.success('Recepta marcada com atesa');
     } catch (error) {
       toast.error('Error al marcar la recepta');
@@ -771,17 +808,31 @@ const StaffDashboard = () => {
                       <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                         <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         <span className="truncate">
-                          {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual}</span>
+                          {citesFiltered.length} pacients • Visitant: <span className="text-primary">{numeroActual === 0 ? '✕' : numeroActual}</span>
                         </span>
                       </CardTitle>
-                      {selectedDia && (
-                        <AddCitaDialog
-                          diaVisitaId={selectedDia.id}
-                          tipus={staffRole!}
-                          diaVisita={selectedDia}
-                          citesOcupades={cites}
-                        />
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleResetMarcador}
+                          disabled={actualitzarNumero.isPending || !selectedDia}
+                          className="gap-1"
+                          title="Marcar com no iniciat"
+                        >
+                          <X className="w-4 h-4" />
+                          <span className="hidden sm:inline">No iniciat</span>
+                        </Button>
+                        {selectedDia && (
+                          <AddCitaDialog
+                            diaVisitaId={selectedDia.id}
+                            tipus={staffRole!}
+                            diaVisita={selectedDia}
+                            citesOcupades={cites}
+                          />
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>

@@ -146,7 +146,7 @@ export function useActualitzarEstatCita() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, estat_assistencia }: { id: string; estat_assistencia: 'visitat' | 'no_assistit' }) => {
+    mutationFn: async ({ id, estat_assistencia }: { id: string; estat_assistencia: 'visitat' | 'no_assistit' | null }) => {
       const { data, error } = await supabase
         .from('cites')
         .update({ estat_assistencia })
