@@ -3,5 +3,8 @@ project_id = "cbfutananppmkhzntzxb"
 [functions.enviar-recordatori]
 verify_jwt = false
 
+[functions.enviar-recepta-renovada]
+verify_jwt = false
+
 [functions.ai-booking-assistant]
 verify_jwt = false
