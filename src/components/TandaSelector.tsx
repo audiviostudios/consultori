@@ -19,6 +19,11 @@ interface TandaSelectorProps {
   diaVisitaId: string;
   titol: string;
   dataVisita?: string;
+  perfilInicial?: {
+    nom_complet: string;
+    telefon: string;
+    email?: string;
+  } | null;
 }
 
 const formSchema = z.object({
@@ -27,7 +32,7 @@ const formSchema = z.object({
   email: z.string().trim().email('Correu electrònic no vàlid').max(255).optional().or(z.literal('')),
 });
 
-export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, titol, dataVisita }: TandaSelectorProps) {
+export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, titol, dataVisita, perfilInicial }: TandaSelectorProps) {
   const [selectedTanda, setSelectedTanda] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -51,7 +56,11 @@ export function TandaSelector({ tipus, maxTandes, citesOcupades, diaVisitaId, ti
     setIsDialogOpen(true);
     setIsConfirmed(false);
     setGeneratedPin('');
-    setFormData({ nom_complet: '', telefon: '', email: '' });
+    setFormData({
+      nom_complet: perfilInicial?.nom_complet || '',
+      telefon: perfilInicial?.telefon || '',
+      email: perfilInicial?.email || '',
+    });
     setErrors({});
   };
 

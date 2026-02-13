@@ -4,7 +4,19 @@ import { Stethoscope, HandHeart, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConsultaForm } from '@/components/ConsultaForm';
 
-export function MobileConsultaSelector() {
+export function MobileConsultaSelector({
+  diaVisitaId,
+  diaVisitaData,
+  perfilInicial,
+}: {
+  diaVisitaId?: string;
+  diaVisitaData?: string;
+  perfilInicial?: {
+    nom_complet: string;
+    telefon: string;
+    email?: string;
+  } | null;
+}) {
   const [selectedTipus, setSelectedTipus] = useState<'metge' | 'infermera' | null>(null);
 
   return (
@@ -60,7 +72,7 @@ export function MobileConsultaSelector() {
               Tornar
             </Button>
             
-            <ConsultaForm tipus={selectedTipus} />
+            <ConsultaForm tipus={selectedTipus} diaVisitaId={diaVisitaId} diaVisitaData={diaVisitaData} perfilInicial={perfilInicial} />
           </motion.div>
         )}
       </AnimatePresence>

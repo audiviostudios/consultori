@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, User, Mail, MessageSquare, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,13 @@ import { z } from 'zod';
 
 interface ConsultaFormProps {
   tipus: 'metge' | 'infermera';
+  diaVisitaId?: string;
+  diaVisitaData?: string;
+  perfilInicial?: {
+    nom_complet: string;
+    telefon: string;
+    email?: string;
+  } | null;
 }
 
 const formSchema = z.object({
@@ -23,7 +30,7 @@ const formSchema = z.object({
   urgencia: z.enum(['baixa', 'mitjana', 'alta']),
 });
 
-export function ConsultaForm({ tipus }: ConsultaFormProps) {
+export function ConsultaForm({ tipus, diaVisitaId, diaVisitaData, perfilInicial }: ConsultaFormProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     nom_complet: '',
@@ -35,6 +42,16 @@ export function ConsultaForm({ tipus }: ConsultaFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const crearConsulta = useCrearConsulta();
+
+  useEffect(() => {
+    if (!perfilInicial) return;
+    setFormData((prev) => ({
+      ...prev,
+      nom_complet: perfilInicial.nom_complet || prev.nom_complet,
+      telefon: perfilInicial.telefon || prev.telefon,
+      email: perfilInicial.email || '',
+    }));
+  }, [perfilInicial]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +69,14 @@ export function ConsultaForm({ tipus }: ConsultaFormProps) {
     }
 
     try {
+      if (!diaVisitaId) {
+        toast.error('No s\'ha trobat el dia de visita');
+        return;
+      }
+
       await crearConsulta.mutateAsync({
+        dia_visita_id: diaVisitaId,
+        dia_visita_data: diaVisitaData,
         tipus,
         ...formData,
       });

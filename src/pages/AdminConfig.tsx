@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, HandHeart, Syringe, RefreshCw, Users, CheckSquare, Square, X, Phone, Pill } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar as CalendarIcon, Stethoscope, HandHeart, Syringe, RefreshCw, Users, CheckSquare, Square, X, Phone, Pill, Pencil, Save, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -13,16 +13,21 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
-import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita, useCitesDia, useEliminarCita, useEliminarCitesMultiples } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCrearDiaVisita, useActualitzarDiaVisita, useEliminarDiaVisita, useCitesDia, useEliminarCita, useEliminarCitesMultiples, useActualitzarCita } from '@/hooks/useDiesVisita';
 import { useConsultesTelefoniques, useEliminarConsulta, useEliminarConsultesMultiples } from '@/hooks/useConsultes';
 import { useReceptes, useEliminarRecepta, useEliminarReceptesMultiples } from '@/hooks/useReceptes';
+import { useUsuarisPin, useEliminarUsuariPin } from '@/hooks/useUsuarisPin';
 import { useCleanupData } from '@/hooks/useCleanupData';
-import { DiaVisita } from '@/lib/types';
+import { DiaVisita, Cita } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_HORA_INICI_METGE = '08:50';
 const DEFAULT_HORA_INICI_INFERMERA = '09:00';
+const LEGACY_RECEPTES_RECOVERY_DAY = '2026-02-12';
+const LEGACY_RECEPTES_CUTOFF = new Date('2026-02-13T00:00:00.000Z').getTime();
+const LEGACY_CONSULTES_RECOVERY_DAY = '2026-02-12';
+const LEGACY_CONSULTES_CUTOFF = new Date('2026-02-13T00:00:00.000Z').getTime();
 
 interface DiaVisitaCardProps {
   dia: DiaVisita;
@@ -182,10 +187,13 @@ const AdminConfig = () => {
   const eliminarDia = useEliminarDiaVisita();
   const eliminarCita = useEliminarCita();
   const eliminarCitesMultiples = useEliminarCitesMultiples();
+  const actualitzarCita = useActualitzarCita();
   const eliminarConsulta = useEliminarConsulta();
   const eliminarConsultesMultiples = useEliminarConsultesMultiples();
   const eliminarRecepta = useEliminarRecepta();
   const eliminarReceptesMultiples = useEliminarReceptesMultiples();
+  const { data: usuarisPin = [] } = useUsuarisPin();
+  const eliminarUsuariPin = useEliminarUsuariPin();
   const cleanupData = useCleanupData();
   
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -195,19 +203,62 @@ const AdminConfig = () => {
   const [selectedCites, setSelectedCites] = useState<Set<string>>(new Set());
   const [selectedConsultes, setSelectedConsultes] = useState<Set<string>>(new Set());
   const [selectedReceptes, setSelectedReceptes] = useState<Set<string>>(new Set());
+  const [editingCitaId, setEditingCitaId] = useState<string | null>(null);
+  const [editingCitaNom, setEditingCitaNom] = useState('');
+  const [pinSearch, setPinSearch] = useState('');
   
   // Obtenir cites del dia seleccionat
   const { data: citesDelDia = [] } = useCitesDia(selectedDiaPerCites);
   const { data: consultes = [] } = useConsultesTelefoniques();
   const { data: receptes = [] } = useReceptes();
-  const dataConsultesSeleccionada = diesVisita.find((d) => d.id === selectedDiaPerConsultes)?.data;
-  const dataReceptesSeleccionada = diesVisita.find((d) => d.id === selectedDiaPerReceptes)?.data;
-  const consultesFiltrades = dataConsultesSeleccionada
-    ? consultes.filter((c) => format(new Date(c.created_at), 'yyyy-MM-dd') === dataConsultesSeleccionada)
+  const diaConsultesSeleccionat = diesVisita.find((d) => d.id === selectedDiaPerConsultes);
+  const diaReceptesSeleccionat = diesVisita.find((d) => d.id === selectedDiaPerReceptes);
+  const esDiaRecuperacioReceptes = diaReceptesSeleccionat?.data === LEGACY_RECEPTES_RECOVERY_DAY;
+  const esDiaRecuperacioConsultes = diaConsultesSeleccionat?.data === LEGACY_CONSULTES_RECOVERY_DAY;
+  const esReceptaLegacy = (createdAt: string) => {
+    const timestamp = new Date(createdAt).getTime();
+    return Number.isFinite(timestamp) && timestamp < LEGACY_RECEPTES_CUTOFF;
+  };
+  const esConsultaLegacy = (createdAt: string) => {
+    const timestamp = new Date(createdAt).getTime();
+    return Number.isFinite(timestamp) && timestamp < LEGACY_CONSULTES_CUTOFF;
+  };
+  const obtenirDataProgramadaConsulta = (consulta: { dia_visita_id?: string | null; created_at: string }) => {
+    if (consulta.dia_visita_id) {
+      const dia = diesVisita.find((d) => d.id === consulta.dia_visita_id);
+      if (dia?.data) return dia.data;
+    }
+    return format(new Date(consulta.created_at), 'yyyy-MM-dd');
+  };
+  const consultesFiltrades = diaConsultesSeleccionat
+    ? consultes.filter(
+        (c) => {
+          if (c.dia_visita_id === diaConsultesSeleccionat.id) return true;
+          if (esDiaRecuperacioConsultes && esConsultaLegacy(c.created_at)) return true;
+          if (!c.atesa && obtenirDataProgramadaConsulta(c) < diaConsultesSeleccionat.data) return true;
+          return !c.dia_visita_id && format(new Date(c.created_at), 'yyyy-MM-dd') === diaConsultesSeleccionat.data;
+        }
+      )
     : [];
-  const receptesFiltrades = dataReceptesSeleccionada
-    ? receptes.filter((r) => format(new Date(r.created_at), 'yyyy-MM-dd') === dataReceptesSeleccionada)
+  const receptesFiltrades = diaReceptesSeleccionat
+    ? receptes.filter(
+        (r) => {
+          if (r.dia_visita_id === diaReceptesSeleccionat.id) return true;
+          if (esDiaRecuperacioReceptes && esReceptaLegacy(r.created_at)) return true;
+          return !r.dia_visita_id && format(new Date(r.created_at), 'yyyy-MM-dd') === diaReceptesSeleccionat.data;
+        }
+      )
     : [];
+  const pinSearchNormalized = pinSearch.trim().toLowerCase();
+  const usuarisPinFiltrats = usuarisPin.filter((usuari) => {
+    if (!pinSearchNormalized) return true;
+    return (
+      usuari.nom_complet.toLowerCase().includes(pinSearchNormalized) ||
+      usuari.telefon.includes(pinSearchNormalized) ||
+      usuari.pin.includes(pinSearchNormalized) ||
+      (usuari.email || '').toLowerCase().includes(pinSearchNormalized)
+    );
+  });
   const allowHourEdit = diesVisita.length === 0
     ? true
     : Object.prototype.hasOwnProperty.call(diesVisita[0] as object, 'hora_inici_metge') &&
@@ -338,6 +389,33 @@ const AdminConfig = () => {
     }
   };
 
+  const handleStartEditCita = (cita: Cita) => {
+    setEditingCitaId(cita.id);
+    setEditingCitaNom(cita.nom_complet);
+  };
+
+  const handleCancelEditCita = () => {
+    setEditingCitaId(null);
+    setEditingCitaNom('');
+  };
+
+  const handleSaveEditCita = async () => {
+    if (!editingCitaId) return;
+    const nom = editingCitaNom.trim();
+    if (nom.length < 2) {
+      toast.error('El nom ha de tenir almenys 2 caràcters');
+      return;
+    }
+
+    try {
+      await actualitzarCita.mutateAsync({ id: editingCitaId, nom_complet: nom });
+      toast.success('Nom de la cita actualitzat');
+      handleCancelEditCita();
+    } catch {
+      toast.error('No s\'ha pogut actualitzar la cita');
+    }
+  };
+
   const handleEliminarCitesSeleccionades = async () => {
     if (selectedCites.size === 0) return;
     
@@ -445,6 +523,17 @@ const AdminConfig = () => {
       toast.success(`${selectedReceptes.size} recepta${selectedReceptes.size > 1 ? 'es' : ''} eliminada${selectedReceptes.size > 1 ? 'es' : ''}`);
     } catch (error) {
       toast.error('Error al eliminar les receptes');
+    }
+  };
+
+  const handleEliminarPin = async (id: string, pin: string) => {
+    if (!confirm(`Vols donar de baixa el PIN ${pin}?`)) return;
+
+    try {
+      await eliminarUsuariPin.mutateAsync({ id });
+      toast.success(`PIN ${pin} donat de baixa`);
+    } catch {
+      toast.error('No s\'ha pogut donar de baixa el PIN');
     }
   };
 
@@ -556,6 +645,7 @@ const AdminConfig = () => {
               <Select value={selectedDiaPerCites} onValueChange={(value) => {
                 setSelectedDiaPerCites(value);
                 setSelectedCites(new Set());
+                handleCancelEditCita();
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un dia..." />
@@ -638,19 +728,47 @@ const AdminConfig = () => {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-medium text-sm break-words">{cita.nom_complet}</p>
+                              {editingCitaId === cita.id ? (
+                                <Input
+                                  value={editingCitaNom}
+                                  onChange={(e) => setEditingCitaNom(e.target.value)}
+                                  className="h-8"
+                                />
+                              ) : (
+                                <p className="font-medium text-sm break-words">{cita.nom_complet}</p>
+                              )}
                               <p className="text-xs text-muted-foreground break-all">{cita.telefon}</p>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEliminarCita(cita.id)}
-                            disabled={eliminarCita.isPending}
-                            className="self-end sm:self-auto"
-                          >
-                            <X className="w-4 h-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1 self-end sm:self-auto">
+                            {editingCitaId === cita.id ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleSaveEditCita}
+                                  disabled={actualitzarCita.isPending}
+                                >
+                                  <Save className="w-4 h-4 text-primary" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={handleCancelEditCita}>
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button variant="ghost" size="sm" onClick={() => handleStartEditCita(cita)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEliminarCita(cita.id)}
+                              disabled={eliminarCita.isPending}
+                            >
+                              <X className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -884,6 +1002,63 @@ const AdminConfig = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Neteja de dades */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5" />
+                Gestió de PIN simplificat
+              </CardTitle>
+              <CardDescription>
+                Dona de baixa PIN d\'usuaris perquè hagin de generar-ne un de nou
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Filtra per nom, telèfon, correu o PIN..."
+                value={pinSearch}
+                onChange={(e) => setPinSearch(e.target.value)}
+              />
+
+              {usuarisPinFiltrats.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <KeyRound className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No hi ha PIN registrats amb aquest filtre</p>
+                </div>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {usuarisPinFiltrats.map((usuari) => (
+                    <div
+                      key={usuari.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 hover:bg-muted/50"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm break-words">{usuari.nom_complet}</p>
+                        <p className="text-xs text-muted-foreground break-all">{usuari.telefon}</p>
+                        {usuari.email && (
+                          <p className="text-xs text-muted-foreground break-all">{usuari.email}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          PIN: <span className="font-mono font-semibold tracking-wide">{usuari.pin}</span>
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleEliminarPin(usuari.id, usuari.pin)}
+                        disabled={eliminarUsuariPin.isPending}
+                        className="self-end sm:self-auto"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Donar de baixa
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

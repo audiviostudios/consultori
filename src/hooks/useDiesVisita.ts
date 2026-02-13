@@ -146,10 +146,31 @@ export function useActualitzarEstatCita() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, estat_assistencia }: { id: string; estat_assistencia: 'visitat' | 'no_assistit' | null }) => {
+    mutationFn: async ({ id, estat_assistencia }: { id: string; estat_assistencia: 'visitat' | 'no_assistit' | 'eliminat' | null }) => {
       const { data, error } = await supabase
         .from('cites')
         .update({ estat_assistencia })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cites'] });
+    },
+  });
+}
+
+export function useActualitzarCita() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, nom_complet }: { id: string; nom_complet: string }) => {
+      const { data, error } = await supabase
+        .from('cites')
+        .update({ nom_complet })
         .eq('id', id)
         .select()
         .single();

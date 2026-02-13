@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { Calendar, Stethoscope, HandHeart, Syringe, Phone, ChevronLeft, ChevronRight, Pill, Clock3 } from 'lucide-react';
+import { Calendar, Stethoscope, HandHeart, Syringe, Phone, ChevronLeft, ChevronRight, Pill, Clock3, Monitor } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { ConsultaForm } from '@/components/ConsultaForm';
 import { MobileConsultaSelector } from '@/components/MobileConsultaSelector';
 import { CancelBookingSection } from '@/components/CancelBookingSection';
 import { ReceptaForm } from '@/components/ReceptaForm';
+import { SimplificaPinSection, PerfilSimplificat } from '@/components/SimplificaPinSection';
 import { InstallPWAButton } from '@/components/InstallPWAButton';
 import { ClearCacheButton } from '@/components/ClearCacheButton';
 import { useDiesVisita, useCitesDia } from '@/hooks/useDiesVisita';
@@ -54,6 +55,7 @@ const Index = () => {
   const HORA_INICI_INFERMERA_STANDARD = '09:00';
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
+  const [perfilSimplificat, setPerfilSimplificat] = useState<PerfilSimplificat | null>(null);
   const isMobile = useIsMobile();
   
   const selectedDia = diesVisita[selectedDiaIndex];
@@ -171,8 +173,9 @@ const Index = () => {
             </motion.div>
 
             {selectedDia && (
-              <Tabs defaultValue="cites" className="space-y-4 sm:space-y-6">
-                <TabsList className="grid w-full grid-cols-3 h-11 sm:h-12">
+              <>
+                <Tabs defaultValue="cites" className="space-y-4 sm:space-y-6">
+                  <TabsList className="grid w-full grid-cols-3 h-11 sm:h-12">
                   <TabsTrigger value="cites" className="text-xs sm:text-base gap-1 sm:gap-2 px-1 sm:px-3">
                     <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span>Cita</span>
@@ -231,6 +234,7 @@ const Index = () => {
                             diaVisitaId={selectedDia.id}
                             titol="Tria número de torn disponible"
                             dataVisita={selectedDia.data}
+                            perfilInicial={perfilSimplificat}
                           />
                         </CardContent>
                       </Card>
@@ -254,6 +258,7 @@ const Index = () => {
                             diaVisitaId={selectedDia.id}
                             titol="Tria número de torn disponible"
                             dataVisita={selectedDia.data}
+                            perfilInicial={perfilSimplificat}
                           />
                         </CardContent>
                       </Card>
@@ -284,6 +289,7 @@ const Index = () => {
                               diaVisitaId={selectedDia.id}
                               titol="Tria número de torn disponible"
                               dataVisita={selectedDia.data}
+                              perfilInicial={perfilSimplificat}
                             />
                           </CardContent>
                         </Card>
@@ -305,6 +311,7 @@ const Index = () => {
                               diaVisitaId={selectedDia.id}
                               titol="Tria número de torn disponible"
                               dataVisita={selectedDia.data}
+                              perfilInicial={perfilSimplificat}
                             />
                           </CardContent>
                         </Card>
@@ -330,8 +337,9 @@ const Index = () => {
                       </CardHeader>
                       <CardContent>
                         <Button asChild className="w-full h-11 gap-2">
-                          <Link to="/pantalla">
-                            Veure per quin número estan visitant
+                          <Link to="/pantalla" className="flex items-center justify-center gap-2">
+                            <Monitor className="w-4 h-4" />
+                            Veure torns
                           </Link>
                         </Button>
                       </CardContent>
@@ -356,11 +364,15 @@ const Index = () => {
                     animate={{ opacity: 1, y: 0 }}
                   >
                     {isMobile ? (
-                      <MobileConsultaSelector />
+                      <MobileConsultaSelector
+                        diaVisitaId={selectedDia?.id}
+                        diaVisitaData={selectedDia?.data}
+                        perfilInicial={perfilSimplificat}
+                      />
                     ) : (
                       <div className="grid gap-6 md:grid-cols-2">
-                        <ConsultaForm tipus="metge" />
-                        <ConsultaForm tipus="infermera" />
+                        <ConsultaForm tipus="metge" diaVisitaId={selectedDia?.id} diaVisitaData={selectedDia?.data} perfilInicial={perfilSimplificat} />
+                        <ConsultaForm tipus="infermera" diaVisitaId={selectedDia?.id} diaVisitaData={selectedDia?.data} perfilInicial={perfilSimplificat} />
                       </div>
                     )}
                   </motion.div>
@@ -372,10 +384,23 @@ const Index = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="max-w-md mx-auto"
                   >
-                    <ReceptaForm />
+                    <ReceptaForm diaVisitaId={selectedDia?.id} diaVisitaData={selectedDia?.data} perfilInicial={perfilSimplificat} />
                   </motion.div>
                 </TabsContent>
-              </Tabs>
+                </Tabs>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="mt-6"
+                >
+                  <SimplificaPinSection
+                    perfilActual={perfilSimplificat}
+                    onPerfilReady={(perfil) => setPerfilSimplificat(perfil)}
+                  />
+                </motion.div>
+              </>
             )}
           </>
         )}

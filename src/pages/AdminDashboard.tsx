@@ -137,10 +137,11 @@ interface DashboardSectionProps {
   icon: typeof Stethoscope;
   titol: string;
   diaActual: DiaVisita | null;
+  diesVisita: DiaVisita[];
   cites: Cita[];
 }
 
-function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: DashboardSectionProps) {
+function DashboardSection({ tipus, icon: Icon, titol, diaActual, diesVisita, cites }: DashboardSectionProps) {
   const { data: consultes = [] } = useConsultesTelefoniques(tipus);
   const { data: receptes = [] } = useReceptes();
   const { data: numerosActuals = [] } = useNumeroActual();
@@ -149,8 +150,40 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
   const marcarReceptaAtesa = useMarcarReceptaAtesa();
 
   const citesFiltered = cites.filter(c => c.tipus === tipus);
+  const esDelDiaSeleccionat = (createdAt: string) =>
+    diaActual ? format(new Date(createdAt), 'yyyy-MM-dd') === diaActual.data : false;
+  const obtenirDataProgramadaConsulta = (consulta: ConsultaTelefonica) => {
+    if (consulta.dia_visita_id) {
+      const dia = diesVisita.find((d) => d.id === consulta.dia_visita_id);
+      if (dia?.data) return dia.data;
+    }
+    return format(new Date(consulta.created_at), 'yyyy-MM-dd');
+  };
+  const obtenirDataProgramadaRecepta = (recepta: Recepta) => {
+    if (recepta.dia_visita_id) {
+      const dia = diesVisita.find((d) => d.id === recepta.dia_visita_id);
+      if (dia?.data) return dia.data;
+    }
+    return format(new Date(recepta.created_at), 'yyyy-MM-dd');
+  };
+  const consultesDelDia = diaActual
+    ? consultes.filter(
+        (consulta) =>
+          consulta.dia_visita_id === diaActual.id ||
+          (!consulta.atesa && obtenirDataProgramadaConsulta(consulta) < diaActual.data) ||
+          (!consulta.dia_visita_id && esDelDiaSeleccionat(consulta.created_at))
+      )
+    : [];
+  const receptesDelDia = diaActual
+    ? receptes.filter(
+        (recepta) =>
+          recepta.dia_visita_id === diaActual.id ||
+          (!recepta.atesa && obtenirDataProgramadaRecepta(recepta) < diaActual.data) ||
+          (!recepta.dia_visita_id && esDelDiaSeleccionat(recepta.created_at))
+      )
+    : [];
   const numeroActual = numerosActuals.find(n => n.tipus === tipus)?.numero || 0;
-  const receptesPendents = receptes.filter(r => !r.atesa);
+  const receptesPendents = receptesDelDia.filter(r => !r.atesa);
 
   const handleDeleteCita = async (citaId: string) => {
     if (!confirm('Vols eliminar aquesta cita?')) return;
@@ -200,7 +233,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
           </TabsTrigger>
           <TabsTrigger value="consultes" className="flex items-center gap-2">
             <Phone className="w-4 h-4" />
-            Consultes ({consultes.filter(c => !c.atesa).length})
+            Consultes ({consultesDelDia.filter(c => !c.atesa).length})
           </TabsTrigger>
           {tipus === 'metge' && (
             <TabsTrigger value="receptes" className="flex items-center gap-2">
@@ -234,7 +267,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
         </TabsContent>
 
         <TabsContent value="consultes">
-          {consultes.length === 0 ? (
+          {consultesDelDia.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 No hi ha consultes telefòniques
@@ -242,7 +275,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {consultes.map((consulta) => (
+              {consultesDelDia.map((consulta) => (
                 <ConsultaCard
                   key={consulta.id}
                   consulta={consulta}
@@ -255,7 +288,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
 
         {tipus === 'metge' && (
           <TabsContent value="receptes">
-            {receptes.length === 0 ? (
+            {receptesDelDia.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   No hi ha sol·licituds de receptes
@@ -263,7 +296,7 @@ function DashboardSection({ tipus, icon: Icon, titol, diaActual, cites }: Dashbo
               </Card>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {receptes.map((recepta) => (
+                {receptesDelDia.map((recepta) => (
                   <ReceptaCard
                     key={recepta.id}
                     recepta={recepta}
@@ -448,6 +481,7 @@ const AdminDashboard = () => {
                     icon={Stethoscope} 
                     titol="Metge" 
                     diaActual={selectedDia}
+                    diesVisita={diesVisita}
                     cites={cites}
                   />
                 </motion.div>
@@ -464,6 +498,7 @@ const AdminDashboard = () => {
                     icon={HandHeart} 
                     titol="Infermera" 
                     diaActual={selectedDia}
+                    diesVisita={diesVisita}
                     cites={cites}
                   />
                 </motion.div>

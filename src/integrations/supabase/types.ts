@@ -110,6 +110,7 @@ export type Database = {
         Row: {
           atesa: boolean
           created_at: string
+          dia_visita_id: string | null
           email: string | null
           id: string
           motiu: string
@@ -121,6 +122,7 @@ export type Database = {
         Insert: {
           atesa?: boolean
           created_at?: string
+          dia_visita_id?: string | null
           email?: string | null
           id?: string
           motiu: string
@@ -132,6 +134,7 @@ export type Database = {
         Update: {
           atesa?: boolean
           created_at?: string
+          dia_visita_id?: string | null
           email?: string | null
           id?: string
           motiu?: string
@@ -140,7 +143,15 @@ export type Database = {
           tipus?: string
           urgencia?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consultes_telefoniques_dia_visita_id_fkey"
+            columns: ["dia_visita_id"]
+            isOneToOne: false
+            referencedRelation: "dies_visita"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dies_visita: {
         Row: {
@@ -244,6 +255,7 @@ export type Database = {
         Row: {
           atesa: boolean
           created_at: string
+          dia_visita_id: string | null
           email: string | null
           id: string
           medicament: string
@@ -254,6 +266,7 @@ export type Database = {
         Insert: {
           atesa?: boolean
           created_at?: string
+          dia_visita_id?: string | null
           email?: string | null
           id?: string
           medicament: string
@@ -264,12 +277,51 @@ export type Database = {
         Update: {
           atesa?: boolean
           created_at?: string
+          dia_visita_id?: string | null
           email?: string | null
           id?: string
           medicament?: string
           nom_complet?: string
           notes?: string | null
           telefon?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptes_dia_visita_id_fkey"
+            columns: ["dia_visita_id"]
+            isOneToOne: false
+            referencedRelation: "dies_visita"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuaris_pin: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nom_complet: string
+          pin: string
+          telefon: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nom_complet: string
+          pin: string
+          telefon: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nom_complet?: string
+          pin?: string
+          telefon?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -279,6 +331,24 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      obtenir_usuari_per_pin: {
+        Args: { _pin: string }
+        Returns: {
+          email: string | null
+          nom_complet: string
+          pin: string
+          telefon: string
+        }[]
+      }
+      registrar_usuari_pin: {
+        Args: { _email?: string; _nom_complet: string; _telefon: string }
+        Returns: {
+          email: string | null
+          nom_complet: string
+          pin: string
+          telefon: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

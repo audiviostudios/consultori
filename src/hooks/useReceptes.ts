@@ -3,16 +3,29 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Recepta } from '@/lib/types';
 
-export function useReceptes() {
+const isDiaVisitaColumnMissing = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string; details?: string; hint?: string };
+  const text = `${err.message ?? ''} ${err.details ?? ''} ${err.hint ?? ''}`.toLowerCase();
+  return err.code === '42703' || text.includes('dia_visita_id');
+};
+
+export function useReceptes(diaVisitaId?: string) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['receptes'],
+    queryKey: ['receptes', diaVisitaId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('receptes')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (diaVisitaId) {
+        query = query.eq('dia_visita_id', diaVisitaId);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       return data as Recepta[];
@@ -48,15 +61,32 @@ export function useCrearRecepta() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (recepta: Omit<Recepta, 'id' | 'created_at' | 'atesa'>) => {
+    mutationFn: async (recepta: Omit<Recepta, 'id' | 'created_at' | 'atesa'> & { dia_visita_id?: string | null; dia_visita_data?: string }) => {
+      const { dia_visita_data, ...payload } = recepta;
       const { data, error } = await supabase
         .from('receptes')
-        .insert(recepta)
+        .insert(payload)
         .select()
         .single();
       
-      if (error) throw error;
-      return data;
+      if (!error) return data;
+
+      // Compatibilitat temporal: si la BD encara no té dia_visita_id,
+      // guardem amb created_at del dia triat per mantenir el filtre per dia.
+      if (!isDiaVisitaColumnMissing(error) || !dia_visita_data) throw error;
+
+      const fallbackPayload = { ...payload } as Record<string, unknown>;
+      delete fallbackPayload.dia_visita_id;
+      const createdAt = new Date(`${dia_visita_data}T12:00:00.000Z`).toISOString();
+
+      const { data: retryData, error: retryError } = await supabase
+        .from('receptes')
+        .insert({ ...fallbackPayload, created_at: createdAt })
+        .select()
+        .single();
+
+      if (retryError) throw retryError;
+      return retryData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receptes'] });

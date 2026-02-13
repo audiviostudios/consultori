@@ -12,8 +12,8 @@ import { useReceptes } from '@/hooks/useReceptes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Cita } from '@/lib/types';
 
-// Extreu les inicials d'un nom complet (p.ex. "Paco Seró" -> "P. S.")
-const getInicials = (nomComplet: string): string => {
+// Extreu el primer nom i el mostra en majúscules (p.ex. "Laura Iglesias" -> "LAURA")
+const getNomCurt = (nomComplet: string): string => {
   // Netegem cometes/puntuació i ignorem paraules poc informatives
   const stopwords = new Set(['de', 'del', 'd', 'la', 'el', 'i']);
 
@@ -26,9 +26,7 @@ const getInicials = (nomComplet: string): string => {
     .filter((p) => !stopwords.has(p.toLowerCase()));
 
   if (parts.length === 0) return '';
-
-  const chosen = parts.length >= 2 ? [parts[0], parts[parts.length - 1]] : [parts[0]];
-  return chosen.map((p) => `${p[0].toUpperCase()}.`).join(' ');
+  return parts[0].toUpperCase();
 };
 
 const LlistaTorns = ({ 
@@ -36,18 +34,27 @@ const LlistaTorns = ({
   tipus, 
   maxTorns, 
   numeroActual,
-  textColor 
+  textColor,
+  isMobile,
 }: { 
   cites: Cita[];
   tipus: Array<'metge' | 'infermera' | 'grip' | 'covid'>;
   maxTorns: number;
   numeroActual: number;
   textColor: string;
+  isMobile: boolean;
 }) => {
   const citesDelTipus = cites.filter(c => tipus.includes(c.tipus));
+  const itemBaseClass = isMobile
+    ? 'p-2.5 sm:p-3.5 min-w-[66px] sm:min-w-[76px]'
+    : 'p-4 md:p-5 min-w-[90px] md:min-w-[104px]';
+  const numberClass = isMobile ? 'text-xl sm:text-2xl' : 'text-3xl md:text-4xl';
+  const nameClass = isMobile
+    ? 'text-xs sm:text-sm max-w-[60px] sm:max-w-[70px]'
+    : 'text-sm md:text-base max-w-[92px] md:max-w-[110px]';
   
   return (
-    <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3.5 mt-4">
+    <div className={`flex flex-wrap justify-center ${isMobile ? 'gap-2.5 sm:gap-3.5 mt-4' : 'gap-4 md:gap-5 mt-6'}`}>
       {Array.from({ length: maxTorns }, (_, i) => i + 1).map(num => {
         const cita = citesDelTipus.find(c => c.numero_tanda === num);
         const isActual = num === numeroActual;
@@ -71,11 +78,12 @@ const LlistaTorns = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: num * 0.03 }}
             className={`
-              flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-xl min-w-[66px] sm:min-w-[76px]
+              flex flex-col items-center justify-center rounded-xl
+              ${itemBaseClass}
               ${bgClass}
             `}
           >
-            <span className={`text-xl sm:text-2xl font-bold ${
+            <span className={`${numberClass} font-bold ${
               isActual ? textColor : 
               isVisitat ? 'text-green-600' : 
               isNoAssistit ? 'text-red-600' : 
@@ -83,10 +91,10 @@ const LlistaTorns = ({
             }`}>
               {num}
             </span>
-            <span className={`text-xs sm:text-sm truncate max-w-[60px] sm:max-w-[70px] text-center leading-tight ${
+            <span className={`${nameClass} truncate text-center leading-tight ${
               cita ? (isVisitat ? 'text-green-700' : isNoAssistit ? 'text-red-700' : 'text-foreground') : 'text-muted-foreground/40'
             }`}>
-              {cita ? getInicials(cita.nom_complet) : '—'}
+              {cita ? getNomCurt(cita.nom_complet) : '—'}
             </span>
             {isActual && (
               <span className={`text-[9px] sm:text-[10px] font-semibold ${textColor} mt-0.5`}>
@@ -121,6 +129,7 @@ const NumeroDisplay = ({
   receptesPendents,
   emergenciaActiva,
   tipusCita,
+  isMobile,
 }: { 
   numero: number; 
   tipus: string;
@@ -136,17 +145,18 @@ const NumeroDisplay = ({
   receptesPendents: number;
   emergenciaActiva: boolean;
   tipusCita: Array<'metge' | 'infermera' | 'grip' | 'covid'>;
+  isMobile: boolean;
 }) => {
   // Trobar les inicials del pacient actual
   const citaActual = cites.find(c => tipusCita.includes(c.tipus) && c.numero_tanda === numero);
-  const inicialsActual = citaActual ? getInicials(citaActual.nom_complet) : null;
+  const inicialsActual = citaActual ? getNomCurt(citaActual.nom_complet) : null;
   const numeroDisplay = numero === 0 ? '✕' : numero;
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="text-center flex flex-col items-center justify-center py-4 sm:py-0 h-full w-full"
+      className={`text-center flex flex-col items-center ${isMobile ? 'justify-center py-4 sm:py-0' : 'justify-between py-4'} h-full w-full`}
     >
       <div className="flex-shrink-0">
         <div className={`w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full ${iconBg} flex items-center justify-center mx-auto mb-2 sm:mb-3`}>
@@ -165,7 +175,7 @@ const NumeroDisplay = ({
       </div>
       
       {/* Número gran */}
-      <div className="flex flex-col items-center mt-2 sm:mt-4">
+      <div className={`flex flex-col items-center ${isMobile ? 'mt-2 sm:mt-4' : 'mt-2 md:mt-3'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={String(numeroDisplay)}
@@ -173,7 +183,7 @@ const NumeroDisplay = ({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 1.5, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className={`text-[5rem] sm:text-[6rem] md:text-[8rem] font-bold ${textColor} leading-none`}
+            className={`${isMobile ? 'text-[5rem] sm:text-[6rem] md:text-[8rem]' : 'text-[7rem] lg:text-[9rem] xl:text-[10.5rem]'} font-bold ${textColor} leading-none`}
           >
             {numeroDisplay}
           </motion.div>
@@ -245,17 +255,18 @@ const NumeroDisplay = ({
       </div>
 
       {/* Llista de torns */}
-      <div className="w-full max-w-md px-2 mt-4">
+      <div className={`w-full ${isMobile ? 'max-w-md px-2 mt-4' : 'max-w-4xl px-2 md:px-4 mt-3'}`}>
         <LlistaTorns 
           cites={cites} 
           tipus={tipusCita} 
           maxTorns={maxTorns} 
           numeroActual={numero}
           textColor={textColor}
+          isMobile={isMobile}
         />
       </div>
 
-      <div className="mt-3 text-[11px] sm:text-xs text-muted-foreground text-center space-y-0.5">
+      <div className={`${isMobile ? 'mt-3' : 'mt-2'} text-[11px] sm:text-xs text-muted-foreground text-center space-y-0.5`}>
         <p>
           <span className="font-semibold text-foreground">{consultesPendents}</span> consultes telefòniques
         </p>
@@ -284,16 +295,17 @@ const Pantalla = () => {
   const diaPantalla = properDiaVisita || diaActual || null;
   const diaVisitaIdPantalla = diaPantalla?.id;
   const { data: cites = [] } = useCitesDia(diaVisitaIdPantalla);
+  const citesVisibles = cites.filter((c) => c.estat_assistencia !== 'eliminat');
   
   const numeroMetgeGuardat = metgeData?.numero || 0;
   const numeroInfermeraGuardat = infermeraData?.numero || 0;
-  const citesMetgeDia = cites.filter((c) => c.tipus === 'metge');
+  const citesMetgeDia = citesVisibles.filter((c) => c.tipus === 'metge');
   const tipusInfermeraPantalla: Array<'infermera' | 'grip' | 'covid'> = [
     'infermera',
     ...(diaPantalla?.vacunes_grip_actiu ? ['grip' as const] : []),
     ...(diaPantalla?.vacunes_covid_actiu ? ['covid' as const] : []),
   ];
-  const citesInfermeraDia = cites.filter((c) => tipusInfermeraPantalla.includes(c.tipus as 'infermera' | 'grip' | 'covid'));
+  const citesInfermeraDia = citesVisibles.filter((c) => tipusInfermeraPantalla.includes(c.tipus as 'infermera' | 'grip' | 'covid'));
   const metgeTornExisteix = citesMetgeDia.some((c) => c.numero_tanda === numeroMetgeGuardat);
   const infermeraTornExisteix = citesInfermeraDia.some((c) => c.numero_tanda === numeroInfermeraGuardat);
 
@@ -333,7 +345,7 @@ const Pantalla = () => {
     tipus: Array<'metge' | 'infermera' | 'grip' | 'covid'>,
     actual: number
   ) => {
-    const citesDelTipus = cites
+    const citesDelTipus = citesVisibles
       .filter(c => tipus.includes(c.tipus) && c.numero_tanda > actual)
       .sort((a, b) => a.numero_tanda - b.numero_tanda);
     return citesDelTipus[0]?.numero_tanda || null;
@@ -383,9 +395,9 @@ const Pantalla = () => {
         </div>
       )}
 
-      <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row'}`}>
+      <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row gap-0'}`}>
         {/* Metge */}
-        <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'border-b' : 'border-r'} border-border p-4 ${emergenciaMetge ? 'bg-red-500/10' : ''}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'border-b p-4' : 'border-r p-8 xl:p-10'} border-border ${emergenciaMetge ? 'bg-red-500/10' : ''}`}>
           <NumeroDisplay
             numero={numeroMetge}
             tipus="Metge"
@@ -393,7 +405,7 @@ const Pantalla = () => {
             iconBg="bg-primary/10"
             textColor="text-primary"
             seguentNumero={seguentMetge}
-            cites={cites}
+            cites={citesVisibles}
             maxTorns={diaPantalla?.max_tandes_metge || 10}
             nomProfessional={nomMetge}
             estatVisita={estatMetge}
@@ -401,11 +413,12 @@ const Pantalla = () => {
             receptesPendents={receptesPendents}
             emergenciaActiva={emergenciaMetge}
             tipusCita={['metge']}
+            isMobile={isMobile}
           />
         </div>
 
         {/* Infermera */}
-        <div className={`flex-1 flex flex-col items-center justify-center p-4 ${emergenciaInfermera ? 'bg-red-500/10' : ''}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8 xl:p-10'} ${emergenciaInfermera ? 'bg-red-500/10' : ''}`}>
           <NumeroDisplay
             numero={numeroInfermera}
             tipus="Infermera"
@@ -413,7 +426,7 @@ const Pantalla = () => {
             iconBg="bg-accent"
             textColor="text-accent-foreground"
             seguentNumero={seguentInfermera}
-            cites={cites}
+            cites={citesVisibles}
             maxTorns={maxTornsInfermera}
             nomProfessional={nomInfermera}
             estatVisita={estatInfermera}
@@ -421,6 +434,7 @@ const Pantalla = () => {
             receptesPendents={0}
             emergenciaActiva={emergenciaInfermera}
             tipusCita={tipusInfermeraPantalla}
+            isMobile={isMobile}
           />
         </div>
       </div>

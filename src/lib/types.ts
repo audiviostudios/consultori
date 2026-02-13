@@ -24,12 +24,13 @@ export interface Cita {
   telefon: string;
   email?: string | null;
   pin_cancelacio?: string;
-  estat_assistencia?: 'visitat' | 'no_assistit' | null;
+  estat_assistencia?: 'visitat' | 'no_assistit' | 'eliminat' | null;
   created_at: string;
 }
 
 export interface ConsultaTelefonica {
   id: string;
+  dia_visita_id?: string | null;
   tipus: 'metge' | 'infermera';
   nom_complet: string;
   telefon: string;
@@ -42,6 +43,7 @@ export interface ConsultaTelefonica {
 
 export interface Recepta {
   id: string;
+  dia_visita_id?: string | null;
   nom_complet: string;
   telefon: string;
   email?: string | null;
@@ -61,6 +63,16 @@ export interface NumeroActual {
   emergencia_activa: boolean;
   consultes_pendents: number;
   receptes_pendents: number;
+  updated_at: string;
+}
+
+export interface UsuariPin {
+  id: string;
+  pin: string;
+  nom_complet: string;
+  telefon: string;
+  email?: string | null;
+  created_at: string;
   updated_at: string;
 }
 

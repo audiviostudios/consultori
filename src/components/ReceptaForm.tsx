@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pill, User, Phone, Mail, FileText, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,19 @@ const formSchema = z.object({
   notes: z.string().trim().max(500).optional().or(z.literal('')),
 });
 
-export function ReceptaForm() {
+export function ReceptaForm({
+  diaVisitaId,
+  diaVisitaData,
+  perfilInicial,
+}: {
+  diaVisitaId?: string;
+  diaVisitaData?: string;
+  perfilInicial?: {
+    nom_complet: string;
+    telefon: string;
+    email?: string;
+  } | null;
+}) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     nom_complet: '',
@@ -30,6 +42,16 @@ export function ReceptaForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const crearRecepta = useCrearRecepta();
+
+  useEffect(() => {
+    if (!perfilInicial) return;
+    setFormData((prev) => ({
+      ...prev,
+      nom_complet: perfilInicial.nom_complet || prev.nom_complet,
+      telefon: perfilInicial.telefon || prev.telefon,
+      email: perfilInicial.email || '',
+    }));
+  }, [perfilInicial]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +69,14 @@ export function ReceptaForm() {
     }
 
     try {
+      if (!diaVisitaId) {
+        toast.error('No s\'ha trobat el dia de visita');
+        return;
+      }
+
       await crearRecepta.mutateAsync({
+        dia_visita_id: diaVisitaId,
+        dia_visita_data: diaVisitaData,
         nom_complet: formData.nom_complet,
         telefon: formData.telefon,
         email: formData.email || null,

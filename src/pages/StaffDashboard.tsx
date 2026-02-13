@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useDiesVisita, useCitesDia, useActualitzarEstatCita, useEliminarCita } from '@/hooks/useDiesVisita';
+import { useDiesVisita, useCitesDia, useActualitzarEstatCita } from '@/hooks/useDiesVisita';
 import { useNumeroActual, useActualitzarNumero, useActualitzarNomProfessional, useToggleEmergencia } from '@/hooks/useNumeroActual';
 import { useConsultesRealtime } from '@/hooks/useConsultesRealtime';
 import { useReceptes, useMarcarReceptaAtesa, useCrearRecepta } from '@/hooks/useReceptes';
@@ -27,12 +27,13 @@ interface CitaCardProps {
   cita: Cita;
   isActive: boolean;
   onSelect: () => void;
-  onAssistit: () => void;
-  onNoAssistit: () => void;
+  onAssistit: (cita: Cita) => void;
+  onNoAssistit: (cita: Cita) => void;
   onDelete: () => void;
 }
 
 function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete }: CitaCardProps) {
+  const isEliminada = cita.estat_assistencia === 'eliminat';
   const getTipusInfo = (tipus: Cita['tipus']) => {
     switch (tipus) {
       case 'grip':
@@ -51,12 +52,12 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete
 
   const handleAssistit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAssistit();
+    onAssistit(cita);
   };
 
   const handleNoAssistit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onNoAssistit();
+    onNoAssistit(cita);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -68,9 +69,12 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onSelect}
+      onClick={() => {
+        if (!isEliminada) onSelect();
+      }}
       className={`
         p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all relative
+        ${isEliminada ? 'opacity-45 grayscale cursor-not-allowed' : ''}
         ${isActive 
           ? 'border-primary bg-primary/5' 
           : 'border-border hover:border-primary/50'
@@ -84,6 +88,7 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete
             <TipusIcon className="w-3 h-3" />
             {tipusInfo.label}
           </Badge>
+          {isEliminada && <Badge variant="secondary" className="text-xs">Eliminada</Badge>}
           {isActive && <Badge className="text-xs">Visitant</Badge>}
           <button
             onClick={handleDelete}
@@ -92,24 +97,22 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete
           >
             <Trash2 className="w-3.5 h-3.5 text-destructive" />
           </button>
-          {isActive && (
-            <>
-              <button
-                onClick={handleAssistit}
-                className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-colors"
-                title="Marcar com a assistit"
-              >
-                <CheckCircle className="w-3.5 h-3.5 text-white" />
-              </button>
-              <button
-                onClick={handleNoAssistit}
-                className="w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 flex items-center justify-center transition-colors"
-                title="No ha assistit"
-              >
-                <X className="w-3.5 h-3.5 text-destructive-foreground" />
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleAssistit}
+            className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-colors"
+            title={cita.estat_assistencia === 'visitat' ? 'Desmarcar visitat' : 'Marcar com a assistit'}
+            disabled={isEliminada}
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-white" />
+          </button>
+          <button
+            onClick={handleNoAssistit}
+            className="w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 flex items-center justify-center transition-colors"
+            title="No ha assistit"
+            disabled={isEliminada}
+          >
+            <X className="w-3.5 h-3.5 text-destructive-foreground" />
+          </button>
         </div>
       </div>
       <p className="font-medium text-foreground text-sm sm:text-base truncate">{cita.nom_complet}</p>
@@ -118,7 +121,7 @@ function CitaCard({ cita, isActive, onSelect, onAssistit, onNoAssistit, onDelete
   );
 }
 
-function AddConsultaDialog({ defaultTipus }: { defaultTipus: 'metge' | 'infermera' }) {
+function AddConsultaDialog({ defaultTipus, diaVisitaId, diaVisitaData }: { defaultTipus: 'metge' | 'infermera'; diaVisitaId: string; diaVisitaData: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [tipus, setTipus] = useState<'metge' | 'infermera'>(defaultTipus);
   const [nomComplet, setNomComplet] = useState('');
@@ -153,6 +156,8 @@ function AddConsultaDialog({ defaultTipus }: { defaultTipus: 'metge' | 'infermer
 
     try {
       await crearConsulta.mutateAsync({
+        dia_visita_id: diaVisitaId,
+        dia_visita_data: diaVisitaData,
         tipus,
         nom_complet: nomComplet.trim(),
         telefon: telefon.trim(),
@@ -237,7 +242,7 @@ function AddConsultaDialog({ defaultTipus }: { defaultTipus: 'metge' | 'infermer
   );
 }
 
-function AddReceptaDialog() {
+function AddReceptaDialog({ diaVisitaId, diaVisitaData }: { diaVisitaId: string; diaVisitaData: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [nomComplet, setNomComplet] = useState('');
   const [telefon, setTelefon] = useState('');
@@ -269,6 +274,8 @@ function AddReceptaDialog() {
 
     try {
       await crearRecepta.mutateAsync({
+        dia_visita_id: diaVisitaId,
+        dia_visita_data: diaVisitaData,
         nom_complet: nomComplet.trim(),
         telefon: telefon.trim(),
         email: email.trim() || null,
@@ -333,11 +340,19 @@ function AddReceptaDialog() {
 
 function ReceptaCard({ recepta, onMarcarAtesa }: { recepta: Recepta; onMarcarAtesa: (id: string) => void }) {
   return (
-    <Card className="border-primary/20">
+    <Card className={recepta.atesa ? 'border-emerald-300 bg-emerald-50/50' : 'border-primary/20'}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm sm:text-base truncate">{recepta.nom_complet}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-sm sm:text-base truncate">{recepta.nom_complet}</p>
+              <Badge
+                variant="outline"
+                className={recepta.atesa ? 'text-xs border-emerald-600 bg-emerald-100 text-emerald-700' : 'text-xs'}
+              >
+                {recepta.atesa ? 'Resolta' : 'Pendent'}
+              </Badge>
+            </div>
             <p className="text-xs sm:text-sm text-muted-foreground">{recepta.telefon}</p>
             <div className="mt-2 p-2 bg-accent/50 rounded text-xs sm:text-sm">
               <p className="font-medium">Medicament:</p>
@@ -352,6 +367,8 @@ function ReceptaCard({ recepta, onMarcarAtesa }: { recepta: Recepta; onMarcarAte
             variant="outline" 
             onClick={() => onMarcarAtesa(recepta.id)}
             className="shrink-0"
+            disabled={recepta.atesa}
+            title={recepta.atesa ? 'Ja resolta' : 'Marcar com resolta'}
           >
             <CheckCircle className="w-4 h-4" />
           </Button>
@@ -363,12 +380,26 @@ function ReceptaCard({ recepta, onMarcarAtesa }: { recepta: Recepta; onMarcarAte
 
 function ConsultaCard({ consulta, onMarcarAtesa }: { consulta: ConsultaTelefonica; onMarcarAtesa: (id: string) => void }) {
   return (
-    <Card className={consulta.urgencia === 'alta' ? 'border-destructive/50' : 'border-primary/20'}>
+    <Card
+      className={
+        consulta.atesa
+          ? 'border-emerald-300 bg-emerald-50/50'
+          : consulta.urgencia === 'alta'
+            ? 'border-destructive/50'
+            : 'border-primary/20'
+      }
+    >
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <p className="font-medium text-sm sm:text-base truncate">{consulta.nom_complet}</p>
+              <Badge
+                variant="outline"
+                className={consulta.atesa ? 'text-xs border-emerald-600 bg-emerald-100 text-emerald-700' : 'text-xs'}
+              >
+                {consulta.atesa ? 'Resolta' : 'Pendent'}
+              </Badge>
               {consulta.urgencia === 'alta' && (
                 <Badge variant="destructive" className="text-xs">Urgent</Badge>
               )}
@@ -384,6 +415,8 @@ function ConsultaCard({ consulta, onMarcarAtesa }: { consulta: ConsultaTelefonic
             variant="outline" 
             onClick={() => onMarcarAtesa(consulta.id)}
             className="shrink-0"
+            disabled={consulta.atesa}
+            title={consulta.atesa ? 'Ja resolta' : 'Marcar com resolta'}
           >
             <CheckCircle className="w-4 h-4" />
           </Button>
@@ -449,6 +482,11 @@ function DiaSelector({ dies, selectedIndex, onSelect }: { dies: DiaVisita[]; sel
 }
 
 const StaffDashboard = () => {
+  const LEGACY_RECEPTES_RECOVERY_DAY = '2026-02-12';
+  const LEGACY_RECEPTES_CUTOFF = new Date('2026-02-13T00:00:00.000Z').getTime();
+  const LEGACY_CONSULTES_RECOVERY_DAY = '2026-02-12';
+  const LEGACY_CONSULTES_CUTOFF = new Date('2026-02-13T00:00:00.000Z').getTime();
+
   const navigate = useNavigate();
   const { data: diesVisita = [], isLoading: loadingDies } = useDiesVisita();
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
@@ -460,7 +498,6 @@ const StaffDashboard = () => {
   const { data: cites = [] } = useCitesDia(selectedDia?.id);
   const { data: numerosActuals = [] } = useNumeroActual();
   const actualitzarNumero = useActualitzarNumero();
-  const eliminarCita = useEliminarCita();
   const actualitzarNomProfessional = useActualitzarNomProfessional();
   const toggleEmergencia = useToggleEmergencia();
   const actualitzarEstatCita = useActualitzarEstatCita();
@@ -476,8 +513,58 @@ const StaffDashboard = () => {
   const { data: consultes = [] } = useConsultesTelefoniques(staffRole || undefined);
   const marcarConsultaAtesa = useMarcarConsultaAtesa();
 
-  const receptesPendents = receptes.filter(r => !r.atesa);
-  const consultesPendents = consultes.filter(c => !c.atesa);
+  const esDelDiaSeleccionat = (createdAt: string) =>
+    selectedDia ? format(new Date(createdAt), 'yyyy-MM-dd') === selectedDia.data : false;
+  const esDiaRecuperacioReceptes = selectedDia?.data === LEGACY_RECEPTES_RECOVERY_DAY;
+  const esDiaRecuperacioConsultes = selectedDia?.data === LEGACY_CONSULTES_RECOVERY_DAY;
+  const esReceptaLegacy = (createdAt: string) => {
+    const timestamp = new Date(createdAt).getTime();
+    return Number.isFinite(timestamp) && timestamp < LEGACY_RECEPTES_CUTOFF;
+  };
+  const esConsultaLegacy = (createdAt: string) => {
+    const timestamp = new Date(createdAt).getTime();
+    return Number.isFinite(timestamp) && timestamp < LEGACY_CONSULTES_CUTOFF;
+  };
+  const obtenirDataProgramadaConsulta = (consulta: ConsultaTelefonica) => {
+    if (consulta.dia_visita_id) {
+      const dia = diesVisita.find((d) => d.id === consulta.dia_visita_id);
+      if (dia?.data) return dia.data;
+    }
+    return format(new Date(consulta.created_at), 'yyyy-MM-dd');
+  };
+  const obtenirDataProgramadaRecepta = (recepta: Recepta) => {
+    if (recepta.dia_visita_id) {
+      const dia = diesVisita.find((d) => d.id === recepta.dia_visita_id);
+      if (dia?.data) return dia.data;
+    }
+    return format(new Date(recepta.created_at), 'yyyy-MM-dd');
+  };
+
+  const consultesDelDia = selectedDia
+    ? consultes.filter((c) => {
+        if (c.dia_visita_id === selectedDia.id) return true;
+        if (esDiaRecuperacioConsultes && esConsultaLegacy(c.created_at)) return true;
+        // Si la consulta està pendent, s'arrossega i es mostra a qualsevol visita posterior.
+        const dataProgramada = obtenirDataProgramadaConsulta(c);
+        if (!c.atesa && dataProgramada < selectedDia.data) return true;
+        return !c.dia_visita_id && esDelDiaSeleccionat(c.created_at);
+      })
+    : [];
+  const receptesDelDia = selectedDia
+    ? receptes.filter(
+        (r) => {
+          if (r.dia_visita_id === selectedDia.id) return true;
+          if (esDiaRecuperacioReceptes && esReceptaLegacy(r.created_at)) return true;
+          // Si la recepta està pendent, s'arrossega i es mostra a qualsevol visita posterior.
+          const dataProgramada = obtenirDataProgramadaRecepta(r);
+          if (!r.atesa && dataProgramada < selectedDia.data) return true;
+          return !r.dia_visita_id && esDelDiaSeleccionat(r.created_at);
+        }
+      )
+    : [];
+
+  const receptesPendents = receptesDelDia.filter(r => !r.atesa);
+  const consultesPendents = consultesDelDia.filter(c => !c.atesa);
 
   // Subscripció a consultes telefòniques en temps real amb alerta sonora
   useConsultesRealtime(staffRole);
@@ -546,12 +633,13 @@ const StaffDashboard = () => {
       return;
     }
 
-    const byNumber = citesFiltered.find(c => c.numero_tanda === numeroActual);
+    const byNumber = citesFiltered.find(c => c.numero_tanda === numeroActual && c.estat_assistencia !== 'eliminat');
     setActiveCitaId(byNumber?.id || null);
   }, [citesFiltered, numeroActual, activeCitaId]);
 
   const handleSelectCita = async (cita: Cita) => {
     if (!staffRole) return;
+    if (cita.estat_assistencia === 'eliminat') return;
     try {
       // Si hi havia un pacient anterior i no s'ha marcat com no_assistit, marcar-lo com visitat
       if (numeroActual > 0 && numeroActual !== cita.numero_tanda && activeCitaId) {
@@ -589,32 +677,26 @@ const StaffDashboard = () => {
     }
   };
 
-  const handleAssistit = async () => {
+  const handleAssistit = async (cita: Cita) => {
     if (!staffRole) return;
     try {
-      const citaActual = activeCitaId ? citesFiltered.find(c => c.id === activeCitaId) : null;
-      if (citaActual) {
-        const nouEstat = citaActual.estat_assistencia === 'visitat' ? null : 'visitat';
-        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: nouEstat });
-        if (nouEstat === 'visitat') {
-          toast.success('Pacient marcat com a assistit');
-        } else {
-          toast.info('Estat de visita desactivat');
-        }
+      const nouEstat = cita.estat_assistencia === 'visitat' ? null : 'visitat';
+      await actualitzarEstatCita.mutateAsync({ id: cita.id, estat_assistencia: nouEstat });
+      if (nouEstat === 'visitat') {
+        toast.success('Pacient marcat com a assistit');
+      } else {
+        toast.info('Estat de visita desactivat');
       }
     } catch (error) {
       toast.error('Error al marcar');
     }
   };
 
-  const handleNoAssistit = async () => {
+  const handleNoAssistit = async (cita: Cita) => {
     if (!staffRole) return;
     try {
-      const citaActual = activeCitaId ? citesFiltered.find(c => c.id === activeCitaId) : null;
-      if (citaActual) {
-        await actualitzarEstatCita.mutateAsync({ id: citaActual.id, estat_assistencia: 'no_assistit' });
-        toast.info('Pacient marcat com no assistit');
-      }
+      await actualitzarEstatCita.mutateAsync({ id: cita.id, estat_assistencia: 'no_assistit' });
+      toast.info('Pacient marcat com no assistit');
     } catch (error) {
       toast.error('Error al marcar');
     }
@@ -622,7 +704,7 @@ const StaffDashboard = () => {
 
   const handleMarcarReceptaAtesa = async (id: string) => {
     try {
-      const recepta = receptes.find((r) => r.id === id);
+      const recepta = receptesDelDia.find((r) => r.id === id);
       await marcarReceptaAtesa.mutateAsync({ id, atesa: true });
       if (recepta?.email) {
         const { error: mailError } = await supabase.functions.invoke('enviar-recepta-renovada', {
@@ -659,11 +741,18 @@ const StaffDashboard = () => {
     if (!confirmacio) return;
 
     try {
-      await eliminarCita.mutateAsync({ id: cita.id });
+      await actualitzarEstatCita.mutateAsync({ id: cita.id, estat_assistencia: 'eliminat' });
       if (activeCitaId === cita.id) {
         setActiveCitaId(null);
+        if (staffRole) {
+          await actualitzarNumero.mutateAsync({
+            tipus: staffRole,
+            numero: 0,
+            dia_visita_id: selectedDia?.id,
+          });
+        }
       }
-      toast.success('Visita esborrada');
+      toast.success('Visita marcada com eliminada (només admin la pot eliminar definitivament)');
     } catch {
       toast.error("No s'ha pogut esborrar la visita");
     }
@@ -855,8 +944,8 @@ const StaffDashboard = () => {
                               cita={cita}
                               isActive={activeCitaId === cita.id}
                               onSelect={() => handleSelectCita(cita)}
-                              onAssistit={handleAssistit}
-                              onNoAssistit={handleNoAssistit}
+                              onAssistit={(selectedCita) => handleAssistit(selectedCita)}
+                              onNoAssistit={(selectedCita) => handleNoAssistit(selectedCita)}
                               onDelete={() => handleEliminarVisita(cita)}
                             />
                           ))}
@@ -872,19 +961,19 @@ const StaffDashboard = () => {
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                         <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                        Consultes telefòniques pendents
+                        Consultes telefòniques
                       </CardTitle>
-                      <AddConsultaDialog defaultTipus={staffRole} />
+                      {selectedDia && <AddConsultaDialog defaultTipus={staffRole} diaVisitaId={selectedDia.id} diaVisitaData={selectedDia.data} />}
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {consultesPendents.length === 0 ? (
+                    {consultesDelDia.length === 0 ? (
                       <div className="py-6 sm:py-8 text-center text-muted-foreground text-sm">
-                        No hi ha consultes pendents
+                        No hi ha consultes registrades per aquest dia
                       </div>
                     ) : (
                       <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {consultesPendents.map((consulta) => (
+                        {consultesDelDia.map((consulta) => (
                           <ConsultaCard
                             key={consulta.id}
                             consulta={consulta}
@@ -904,19 +993,19 @@ const StaffDashboard = () => {
                       <div className="flex items-center justify-between gap-2">
                         <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                           <Pill className="w-4 h-4 sm:w-5 sm:h-5" />
-                          Sol·licituds de receptes pendents
+                          Sol·licituds de receptes
                         </CardTitle>
-                        <AddReceptaDialog />
+                        {selectedDia && <AddReceptaDialog diaVisitaId={selectedDia.id} diaVisitaData={selectedDia.data} />}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {receptesPendents.length === 0 ? (
+                      {receptesDelDia.length === 0 ? (
                         <div className="py-6 sm:py-8 text-center text-muted-foreground text-sm">
-                          No hi ha sol·licituds de receptes pendents
+                          No hi ha sol·licituds de receptes per aquest dia
                         </div>
                       ) : (
                         <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {receptesPendents.map((recepta) => (
+                          {receptesDelDia.map((recepta) => (
                             <ReceptaCard
                               key={recepta.id}
                               recepta={recepta}
